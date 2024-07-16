@@ -1024,6 +1024,11 @@ const message = {
         },
         clam: {
             clam: '病毒扫描',
+            cron: '定时扫描',
+            cronHelper: '专业版支持定时扫描功能 ',
+            specErr: '执行周期格式错误，请检查后重试！',
+            disableMsg: '停止定时执行会导致该扫描任务不再自动执行。是否继续？',
+            enableMsg: '启用定时执行会让该扫描任务定期自动执行。是否继续？',
             showFresh: '显示病毒库服务',
             hideFresh: '隐藏病毒库服务',
             clamHelper:
