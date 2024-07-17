@@ -1,9 +1,10 @@
 on:
   push:
+    # Sequence of patterns matched against refs/tags
     tags:
-      - 'v*'
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
-name: Create Release And Upload Assets
+name: Create Release And Upload assets
 
 jobs:
   create-release:
@@ -11,34 +12,26 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20.2'
-
       - name: Build Web
         run: |
           cd frontend && npm install && npm run build:pro
         env:
           NODE_OPTIONS: --max-old-space-size=8192
-
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-
-      - name: Setup GoReleaser
+      - name: Build Release
         uses: goreleaser/goreleaser-action@v6
         with:
+          distribution: goreleaser
           version: latest
-
-      - name: Run GoReleaser
-        run: goreleaser release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Assets to GitHub Release
+          args: release --skip=publish --clean
+      - name: Upload Assets
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
@@ -62,7 +55,6 @@ jobs:
           files: |
             dist/*.tar.gz
             dist/checksums.txt
-
       # - name: Setup OSSUTIL
       #   uses: yizhoumo/setup-ossutil@v1
       #   with:
@@ -70,6 +62,5 @@ jobs:
       #     access-key-id: ${{ secrets.OSS_ACCESS_KEY_ID }}
       #     access-key-secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       #     ossutil-version: '1.7.14'
-
       # - name: Upload Assets to OSS
-      #   run: ossutil cp -r dist/ oss://resource-fit2cloud-com/1panel/package/stable/${{ github.ref_name }}/release/ --include "*.tar.gz" --include "checksums.txt" --only-current-dir --force
+      #   run: ossutil cp -r dist/ oss://resource-fit2cloud-com/1panel/package/stable/${{  github.ref_name }}/release/ --include "*.tar.gz" --include "checksums.txt" --only-current-dir --force
