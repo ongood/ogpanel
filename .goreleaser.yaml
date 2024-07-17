@@ -1,5 +1,8 @@
 # This is an example .goreleaser.yml file with some sensible defaults.
 # Make sure to check the documentation at https://goreleaser.com
+# 更新配置文件版本为 2
+version: 2
+
 before:
   hooks:
     # - export NODE_OPTIONS="--max-old-space-size=8192"
