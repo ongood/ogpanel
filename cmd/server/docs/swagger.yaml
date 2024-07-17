@@ -48,6 +48,8 @@ definitions:
     properties:
       detailId:
         type: integer
+      dockerCompose:
+        type: string
       version:
         type: string
     type: object
@@ -213,7 +215,96 @@ definitions:
         type: string
     required:
     - database
-    - value
+    type: object
+  dto.ClamBaseInfo:
+    properties:
+      freshIsActive:
+        type: boolean
+      freshIsExist:
+        type: boolean
+      freshVersion:
+        type: string
+      isActive:
+        type: boolean
+      isExist:
+        type: boolean
+      version:
+        type: string
+    type: object
+  dto.ClamCreate:
+    properties:
+      description:
+        type: string
+      infectedDir:
+        type: string
+      infectedStrategy:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+    type: object
+  dto.ClamDelete:
+    properties:
+      ids:
+        items:
+          type: integer
+        type: array
+      removeInfected:
+        type: boolean
+      removeRecord:
+        type: boolean
+    required:
+    - ids
+    type: object
+  dto.ClamFileReq:
+    properties:
+      name:
+        type: string
+      tail:
+        type: string
+    required:
+    - name
+    type: object
+  dto.ClamLogReq:
+    properties:
+      clamName:
+        type: string
+      recordName:
+        type: string
+      tail:
+        type: string
+    type: object
+  dto.ClamLogSearch:
+    properties:
+      clamID:
+        type: integer
+      endTime:
+        type: string
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      startTime:
+        type: string
+    required:
+    - page
+    - pageSize
+    type: object
+  dto.ClamUpdate:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      infectedDir:
+        type: string
+      infectedStrategy:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
     type: object
   dto.Clean:
     properties:
@@ -269,6 +360,8 @@ definitions:
         type: string
       name:
         type: string
+      secret:
+        type: string
       type:
         enum:
         - app
@@ -288,6 +381,8 @@ definitions:
       file:
         type: string
       name:
+        type: string
+      secret:
         type: string
       source:
         enum:
@@ -397,6 +492,23 @@ definitions:
     - content
     - name
     - path
+    type: object
+  dto.ContainerCommit:
+    properties:
+      author:
+        type: string
+      comment:
+        type: string
+      containerID:
+        type: string
+      containerName:
+        type: string
+      newImageName:
+        type: string
+      pause:
+        type: boolean
+    required:
+    - containerID
     type: object
   dto.ContainerListStats:
     properties:
@@ -611,6 +723,8 @@ definitions:
         type: integer
       script:
         type: string
+      secret:
+        type: string
       sourceDir:
         type: string
       spec:
@@ -662,6 +776,8 @@ definitions:
         minimum: 1
         type: integer
       script:
+        type: string
+      secret:
         type: string
       sourceDir:
         type: string
@@ -891,7 +1007,6 @@ definitions:
     required:
     - from
     - name
-    - password
     - type
     - username
     - version
@@ -974,8 +1089,15 @@ definitions:
       info:
         type: string
       order:
+        enum:
+        - "null"
+        - ascending
+        - descending
         type: string
       orderBy:
+        enum:
+        - name
+        - created_at
         type: string
       page:
         type: integer
@@ -984,6 +1106,8 @@ definitions:
       type:
         type: string
     required:
+    - order
+    - orderBy
     - page
     - pageSize
     type: object
@@ -1016,7 +1140,6 @@ definitions:
       version:
         type: string
     required:
-    - password
     - type
     - username
     - version
@@ -1201,6 +1324,38 @@ definitions:
     - credential
     - type
     - vars
+    type: object
+  dto.ForwardRuleOperate:
+    properties:
+      rules:
+        items:
+          properties:
+            num:
+              type: string
+            operation:
+              enum:
+              - add
+              - remove
+              type: string
+            port:
+              type: string
+            protocol:
+              enum:
+              - tcp
+              - udp
+              - tcp/udp
+              type: string
+            targetIP:
+              type: string
+            targetPort:
+              type: string
+          required:
+          - operation
+          - port
+          - protocol
+          - targetPort
+          type: object
+        type: array
     type: object
   dto.FtpBaseInfo:
     properties:
@@ -1721,8 +1876,15 @@ definitions:
       info:
         type: string
       order:
+        enum:
+        - "null"
+        - ascending
+        - descending
         type: string
       orderBy:
+        enum:
+        - name
+        - created_at
         type: string
       page:
         type: integer
@@ -1730,6 +1892,8 @@ definitions:
         type: integer
     required:
     - database
+    - order
+    - orderBy
     - page
     - pageSize
     type: object
@@ -2004,6 +2168,8 @@ definitions:
     type: object
   dto.OsInfo:
     properties:
+      diskSize:
+        type: integer
       kernelArch:
         type: string
       kernelVersion:
@@ -2024,8 +2190,16 @@ definitions:
       name:
         type: string
       order:
+        enum:
+        - "null"
+        - ascending
+        - descending
         type: string
       orderBy:
+        enum:
+        - name
+        - status
+        - created_at
         type: string
       page:
         type: integer
@@ -2043,9 +2217,37 @@ definitions:
         - dead
         type: string
     required:
+    - order
+    - orderBy
     - page
     - pageSize
     - state
+    type: object
+  dto.PageCronjob:
+    properties:
+      info:
+        type: string
+      order:
+        enum:
+        - "null"
+        - ascending
+        - descending
+        type: string
+      orderBy:
+        enum:
+        - name
+        - status
+        - created_at
+        type: string
+      page:
+        type: integer
+      pageSize:
+        type: integer
+    required:
+    - order
+    - orderBy
+    - page
+    - pageSize
     type: object
   dto.PageInfo:
     properties:
@@ -2217,8 +2419,15 @@ definitions:
       info:
         type: string
       order:
+        enum:
+        - "null"
+        - ascending
+        - descending
         type: string
       orderBy:
+        enum:
+        - name
+        - created_at
         type: string
       page:
         type: integer
@@ -2226,6 +2435,8 @@ definitions:
         type: integer
     required:
     - database
+    - order
+    - orderBy
     - page
     - pageSize
     type: object
@@ -2614,10 +2825,6 @@ definitions:
     properties:
       info:
         type: string
-      order:
-        type: string
-      orderBy:
-        type: string
       page:
         type: integer
       pageSize:
@@ -2766,6 +2973,8 @@ definitions:
         type: string
       id:
         type: integer
+      secret:
+        type: string
     required:
     - defaultDownload
     - from
@@ -2790,6 +2999,8 @@ definitions:
         type: boolean
       reDownload:
         type: boolean
+      secret:
+        type: string
     required:
     - id
     type: object
@@ -2923,6 +3134,8 @@ definitions:
         type: string
       group:
         type: string
+      isDetail:
+        type: boolean
       isDir:
         type: boolean
       isHidden:
@@ -3202,6 +3415,8 @@ definitions:
         type: integer
       domains:
         type: string
+      execShell:
+        type: boolean
       expireDate:
         type: string
       id:
@@ -3226,6 +3441,8 @@ definitions:
         type: string
       pushDir:
         type: boolean
+      shell:
+        type: string
       skipDNS:
         type: boolean
       startDate:
@@ -3312,6 +3529,8 @@ definitions:
         type: boolean
       detailId:
         type: integer
+      dockerCompose:
+        type: string
       forceDelete:
         type: boolean
       installId:
@@ -3454,6 +3673,8 @@ definitions:
         type: string
       replace:
         type: boolean
+      secret:
+        type: string
       type:
         type: string
     required:
@@ -3464,6 +3685,8 @@ definitions:
     type: object
   request.FileContentReq:
     properties:
+      isDetail:
+        type: boolean
       path:
         type: string
     required:
@@ -3495,6 +3718,8 @@ definitions:
       dst:
         type: string
       path:
+        type: string
+      secret:
         type: string
       type:
         type: string
@@ -3567,6 +3792,8 @@ definitions:
         type: boolean
       expand:
         type: boolean
+      isDetail:
+        type: boolean
       page:
         type: integer
       pageSize:
@@ -3593,6 +3820,8 @@ definitions:
     properties:
       ID:
         type: integer
+      latest:
+        type: boolean
       name:
         type: string
       page:
@@ -4227,6 +4456,8 @@ definitions:
         type: string
       domains:
         type: string
+      execShell:
+        type: boolean
       id:
         type: integer
       keyType:
@@ -4242,6 +4473,8 @@ definitions:
         type: boolean
       renew:
         type: boolean
+      shell:
+        type: string
       sslID:
         type: integer
       time:
@@ -4411,6 +4644,8 @@ definitions:
         type: string
       enable:
         type: boolean
+      hsts:
+        type: boolean
       httpConfig:
         enum:
         - HTTPSOnly
@@ -4435,6 +4670,16 @@ definitions:
         type: integer
     required:
     - websiteId
+    type: object
+  request.WebsiteHtmlUpdate:
+    properties:
+      content:
+        type: string
+      type:
+        type: string
+    required:
+    - content
+    - type
     type: object
   request.WebsiteInstallCheckReq:
     properties:
@@ -4556,6 +4801,8 @@ definitions:
         additionalProperties:
           type: string
         type: object
+      sni:
+        type: boolean
     required:
     - id
     - match
@@ -4607,6 +4854,8 @@ definitions:
         type: boolean
       dnsAccountId:
         type: integer
+      execShell:
+        type: boolean
       id:
         type: integer
       keyType:
@@ -4623,6 +4872,8 @@ definitions:
         type: string
       pushDir:
         type: boolean
+      shell:
+        type: string
       skipDNS:
         type: boolean
     required:
@@ -4658,6 +4909,8 @@ definitions:
         type: boolean
       dnsAccountId:
         type: integer
+      execShell:
+        type: boolean
       id:
         type: integer
       keyType:
@@ -4674,10 +4927,11 @@ definitions:
         type: string
       pushDir:
         type: boolean
+      shell:
+        type: string
       skipDNS:
         type: boolean
     required:
-    - acmeAccountId
     - id
     - primaryDomain
     - provider
@@ -4709,8 +4963,17 @@ definitions:
       name:
         type: string
       order:
+        enum:
+        - "null"
+        - ascending
+        - descending
         type: string
       orderBy:
+        enum:
+        - primary_domain
+        - type
+        - status
+        - created_at
         type: string
       page:
         type: integer
@@ -4719,6 +4982,8 @@ definitions:
       websiteGroupId:
         type: integer
     required:
+    - order
+    - orderBy
     - page
     - pageSize
     type: object
@@ -4925,6 +5190,8 @@ definitions:
         type: string
       group:
         type: string
+      isDetail:
+        type: boolean
       isDir:
         type: boolean
       isHidden:
@@ -4966,8 +5233,12 @@ definitions:
         items:
           $ref: '#/definitions/response.FileTree'
         type: array
+      extension:
+        type: string
       id:
         type: string
+      isDir:
+        type: boolean
       name:
         type: string
       path:
@@ -5180,6 +5451,8 @@ definitions:
         type: string
       enable:
         type: boolean
+      hsts:
+        type: boolean
       httpConfig:
         type: string
     type: object
@@ -5364,29 +5637,6 @@ paths:
         formatEN: Install app [appKey]-[name]
         formatZH: 安装应用 [appKey]-[name]
         paramKeys: []
-  /apps/installed/:appInstallId/versions:
-    get:
-      consumes:
-      - application/json
-      description: 通过 install id 获取应用更新版本
-      parameters:
-      - description: request
-        in: path
-        name: appInstallId
-        required: true
-        type: integer
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/dto.AppVersion'
-            type: array
-      security:
-      - ApiKeyAuth: []
-      summary: Search app update version by install id
-      tags:
-      - App
   /apps/installed/check:
     post:
       consumes:
@@ -5702,6 +5952,29 @@ paths:
         formatEN: Sync the list of installed apps
         formatZH: 同步已安装应用列表
         paramKeys: []
+  /apps/installed/update/versions:
+    post:
+      consumes:
+      - application/json
+      description: 通过 install id 获取应用更新版本
+      parameters:
+      - description: request
+        in: path
+        name: appInstallId
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.AppVersion'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: Search app update version by install id
+      tags:
+      - App
   /apps/search:
     post:
       consumes:
@@ -5915,6 +6188,24 @@ paths:
         formatEN: clean container [name] logs
         formatZH: 清理容器 [name] 日志
         paramKeys: []
+  /containers/commit:
+    post:
+      consumes:
+      - application/json
+      description: 容器提交生成新镜像
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ContainerCommit'
+      responses:
+        "200":
+          description: OK
+      summary: Commit Container
+      tags:
+      - Container
   /containers/compose:
     post:
       consumes:
@@ -6198,6 +6489,10 @@ paths:
       summary: Load docker status
       tags:
       - Container Docker
+  /containers/download/log:
+    post:
+      description: 下载容器日志
+      responses: {}
   /containers/image:
     get:
       description: 获取镜像名称列表
@@ -7517,7 +7812,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/dto.SearchWithPage'
+          $ref: '#/definitions/dto.PageCronjob'
       responses:
         "200":
           description: OK
@@ -10291,6 +10586,33 @@ paths:
       summary: Create group
       tags:
       - Firewall
+  /hosts/firewall/forward:
+    post:
+      consumes:
+      - application/json
+      description: 更新防火墙端口转发规则
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ForwardRuleOperate'
+      responses:
+        "200":
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      summary: Create group
+      tags:
+      - Firewall
+      x-panel-log:
+        BeforeFunctions: []
+        bodyKeys:
+        - source_port
+        formatEN: update port forward rules [source_port]
+        formatZH: 更新端口转发规则 [source_port]
+        paramKeys: []
   /hosts/firewall/ip:
     post:
       consumes:
@@ -12174,6 +12496,305 @@ paths:
         formatEN: upgrade system => [version]
         formatZH: 更新系统 => [version]
         paramKeys: []
+  /toolbox/clam:
+    post:
+      consumes:
+      - application/json
+      description: 创建扫描规则
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ClamCreate'
+      responses:
+        "200":
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      summary: Create clam
+      tags:
+      - Clam
+      x-panel-log:
+        BeforeFunctions: []
+        bodyKeys:
+        - name
+        - path
+        formatEN: create clam [name][path]
+        formatZH: 创建扫描规则 [name][path]
+        paramKeys: []
+  /toolbox/clam/base:
+    get:
+      consumes:
+      - application/json
+      description: 获取 Clam 基础信息
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ClamBaseInfo'
+      security:
+      - ApiKeyAuth: []
+      summary: Load clam base info
+      tags:
+      - Clam
+  /toolbox/clam/del:
+    post:
+      consumes:
+      - application/json
+      description: 删除扫描规则
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ClamDelete'
+      responses:
+        "200":
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      summary: Delete clam
+      tags:
+      - Clam
+      x-panel-log:
+        BeforeFunctions:
+        - db: clams
+          input_column: id
+          input_value: ids
+          isList: true
+          output_column: name
+          output_value: names
+        bodyKeys:
+        - ids
+        formatEN: delete clam [names]
+        formatZH: 删除扫描规则 [names]
+        paramKeys: []
+  /toolbox/clam/file/search:
+    post:
+      consumes:
+      - application/json
+      description: 获取扫描文件
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ClamFileReq'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PageResult'
+      security:
+      - ApiKeyAuth: []
+      summary: Load clam file
+      tags:
+      - Clam
+  /toolbox/clam/file/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新病毒扫描配置文件
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateByNameAndFile'
+      responses:
+        "200":
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      summary: Update clam file
+      tags:
+      - Clam
+  /toolbox/clam/handle:
+    post:
+      consumes:
+      - application/json
+      description: 执行病毒扫描
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.OperateByID'
+      responses:
+        "200":
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      summary: Handle clam scan
+      tags:
+      - Clam
+      x-panel-log:
+        BeforeFunctions:
+        - db: clams
+          input_column: id
+          input_value: id
+          isList: true
+          output_column: name
+          output_value: name
+        bodyKeys:
+        - id
+        formatEN: handle clam scan [name]
+        formatZH: 执行病毒扫描 [name]
+        paramKeys: []
+  /toolbox/clam/operate:
+    post:
+      consumes:
+      - application/json
+      description: 修改 Clam 状态
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.Operate'
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Operate Clam
+      tags:
+      - Clam
+      x-panel-log:
+        BeforeFunctions: []
+        bodyKeys:
+        - operation
+        formatEN: '[operation] FTP'
+        formatZH: '[operation] Clam'
+        paramKeys: []
+  /toolbox/clam/record/clean:
+    post:
+      consumes:
+      - application/json
+      description: 清空扫描报告
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.OperateByID'
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Clean clam record
+      tags:
+      - Clam
+      x-panel-log:
+        BeforeFunctions:
+        - db: clams
+          input_column: id
+          input_value: id
+          isList: true
+          output_column: name
+          output_value: name
+        bodyKeys:
+        - id
+        formatEN: clean clam record [name]
+        formatZH: 清空扫描报告 [name]
+        paramKeys: []
+  /toolbox/clam/record/log:
+    post:
+      consumes:
+      - application/json
+      description: 获取扫描结果详情
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ClamLogReq'
+      responses:
+        "200":
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      summary: Load clam record detail
+      tags:
+      - Clam
+  /toolbox/clam/record/search:
+    post:
+      consumes:
+      - application/json
+      description: 获取扫描结果列表分页
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ClamLogSearch'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PageResult'
+      security:
+      - ApiKeyAuth: []
+      summary: Page clam record
+      tags:
+      - Clam
+  /toolbox/clam/search:
+    post:
+      consumes:
+      - application/json
+      description: 获取扫描规则列表分页
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SearchWithPage'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PageResult'
+      security:
+      - ApiKeyAuth: []
+      summary: Page clam
+      tags:
+      - Clam
+  /toolbox/clam/update:
+    post:
+      consumes:
+      - application/json
+      description: 修改扫描规则
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ClamUpdate'
+      responses:
+        "200":
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      summary: Update clam
+      tags:
+      - Clam
+      x-panel-log:
+        BeforeFunctions: []
+        bodyKeys:
+        - name
+        - path
+        formatEN: update clam [name][path]
+        formatZH: 修改扫描规则 [name][path]
+        paramKeys: []
   /toolbox/clean:
     post:
       consumes:
@@ -13069,6 +13690,39 @@ paths:
         formatEN: Delete website ca [name]
         formatZH: 删除网站 ca [name]
         paramKeys: []
+  /websites/ca/download:
+    post:
+      consumes:
+      - application/json
+      description: 下载 CA 证书文件
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.WebsiteResourceReq'
+      responses:
+        "200":
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      summary: Download CA file
+      tags:
+      - Website CA
+      x-panel-log:
+        BeforeFunctions:
+        - db: website_cas
+          input_column: id
+          input_value: id
+          isList: false
+          output_column: name
+          output_value: name
+        bodyKeys:
+        - id
+        formatEN: download ca file [name]
+        formatZH: 下载 CA 证书文件 [name]
+        paramKeys: []
   /websites/ca/obtain:
     post:
       consumes:
@@ -13235,6 +13889,48 @@ paths:
         - websiteId
         formatEN: Nginx conf update [domain]
         formatZH: nginx 配置修改 [domain]
+        paramKeys: []
+  /websites/default/html/:type:
+    get:
+      consumes:
+      - application/json
+      description: 获取默认 html
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.FileInfo'
+      security:
+      - ApiKeyAuth: []
+      summary: Get default html
+      tags:
+      - Website
+  /websites/default/html/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新默认 html
+      parameters:
+      - description: request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.WebsiteHtmlUpdate'
+      responses:
+        "200":
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      summary: Update default html
+      tags:
+      - Website
+      x-panel-log:
+        BeforeFunctions: []
+        bodyKeys:
+        - type
+        formatEN: Update default html
+        formatZH: 更新默认 html
         paramKeys: []
   /websites/default/server:
     post:

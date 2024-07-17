@@ -48,13 +48,9 @@ func NewISnapshotService() ISnapshotService {
 
 func (u *SnapshotService) SearchWithPage(req dto.SearchWithPage) (int64, interface{}, error) {
 	total, systemBackups, err := snapshotRepo.Page(req.Page, req.PageSize, commonRepo.WithLikeName(req.Info))
-	var dtoSnap []dto.SnapshotInfo
-	for _, systemBackup := range systemBackups {
-		var item dto.SnapshotInfo
-		if err := copier.Copy(&item, &systemBackup); err != nil {
-			return 0, nil, errors.WithMessage(constant.ErrStructTransform, err.Error())
-		}
-		dtoSnap = append(dtoSnap, item)
+	dtoSnap, err := loadSnapSize(systemBackups)
+	if err != nil {
+		return 0, nil, err
 	}
 	return total, dtoSnap, err
 }
@@ -123,7 +119,7 @@ type SnapshotJson struct {
 }
 
 func (u *SnapshotService) SnapshotCreate(req dto.SnapshotCreate) error {
-	if _, err := u.HandleSnapshot(false, "", req, time.Now().Format("20060102150405"), req.Secret); err != nil {
+	if _, err := u.HandleSnapshot(false, "", req, time.Now().Format(constant.DateTimeSlimLayout), req.Secret); err != nil {
 		return err
 	}
 	return nil
@@ -136,7 +132,7 @@ func (u *SnapshotService) SnapshotRecover(req dto.SnapshotRecover) error {
 		return err
 	}
 	if hasOs(snap.Name) && !strings.Contains(snap.Name, loadOs()) {
-		return fmt.Errorf("Restoring snapshots(%s) between different server architectures(%s) is not supported.", snap.Name, loadOs())
+		return fmt.Errorf("restoring snapshots(%s) between different server architectures(%s) is not supported", snap.Name, loadOs())
 	}
 	if !req.IsNew && len(snap.InterruptStep) != 0 && len(snap.RollbackStatus) != 0 {
 		return fmt.Errorf("the snapshot has been rolled back and cannot be restored again")
@@ -354,7 +350,7 @@ func updateRecoverStatus(id uint, isRecover bool, interruptStep, status, message
 			"interrupt_step":    interruptStep,
 			"recover_status":    status,
 			"recover_message":   message,
-			"last_recovered_at": time.Now().Format("2006-01-02 15:04:05"),
+			"last_recovered_at": time.Now().Format(constant.DateTimeLayout),
 		}); err != nil {
 			global.LOG.Errorf("update snap recover status failed, err: %v", err)
 		}
@@ -369,7 +365,7 @@ func updateRecoverStatus(id uint, isRecover bool, interruptStep, status, message
 			"interrupt_step":     "",
 			"rollback_status":    "",
 			"rollback_message":   "",
-			"last_rollbacked_at": time.Now().Format("2006-01-02 15:04:05"),
+			"last_rollbacked_at": time.Now().Format(constant.DateTimeLayout),
 		}); err != nil {
 			global.LOG.Errorf("update snap recover status failed, err: %v", err)
 		}
@@ -379,7 +375,7 @@ func updateRecoverStatus(id uint, isRecover bool, interruptStep, status, message
 	if err := snapshotRepo.Update(id, map[string]interface{}{
 		"rollback_status":    status,
 		"rollback_message":   message,
-		"last_rollbacked_at": time.Now().Format("2006-01-02 15:04:05"),
+		"last_rollbacked_at": time.Now().Format(constant.DateTimeLayout),
 	}); err != nil {
 		global.LOG.Errorf("update snap recover status failed, err: %v", err)
 	}
@@ -393,7 +389,7 @@ func (u *SnapshotService) handleUnTar(sourceDir, targetDir string, secret string
 	}
 	commands := ""
 	if len(secret) != 0 {
-		extraCmd := "openssl enc -d -aes-256-cbc -k " + secret + " -in " + sourceDir + " | "
+		extraCmd := "openssl enc -d -aes-256-cbc -k '" + secret + "' -in " + sourceDir + " | "
 		commands = fmt.Sprintf("%s tar -zxvf - -C %s", extraCmd, targetDir+" > /dev/null 2>&1")
 		global.LOG.Debug(strings.ReplaceAll(commands, fmt.Sprintf(" %s ", secret), "******"))
 	} else {
@@ -509,4 +505,49 @@ func loadOs() string {
 	default:
 		return hostInfo.KernelArch
 	}
+}
+
+func loadSnapSize(records []model.Snapshot) ([]dto.SnapshotInfo, error) {
+	var datas []dto.SnapshotInfo
+	clientMap := make(map[string]loadSizeHelper)
+	var wg sync.WaitGroup
+	for i := 0; i < len(records); i++ {
+		var item dto.SnapshotInfo
+		if err := copier.Copy(&item, &records[i]); err != nil {
+			return nil, errors.WithMessage(constant.ErrStructTransform, err.Error())
+		}
+		itemPath := fmt.Sprintf("system_snapshot/%s.tar.gz", item.Name)
+		if _, ok := clientMap[records[i].DefaultDownload]; !ok {
+			backup, err := backupRepo.Get(commonRepo.WithByType(records[i].DefaultDownload))
+			if err != nil {
+				global.LOG.Errorf("load backup model %s from db failed, err: %v", records[i].DefaultDownload, err)
+				clientMap[records[i].DefaultDownload] = loadSizeHelper{}
+				datas = append(datas, item)
+				continue
+			}
+			client, err := NewIBackupService().NewClient(&backup)
+			if err != nil {
+				global.LOG.Errorf("load backup client %s from db failed, err: %v", records[i].DefaultDownload, err)
+				clientMap[records[i].DefaultDownload] = loadSizeHelper{}
+				datas = append(datas, item)
+				continue
+			}
+			item.Size, _ = client.Size(path.Join(strings.TrimLeft(backup.BackupPath, "/"), itemPath))
+			datas = append(datas, item)
+			clientMap[records[i].DefaultDownload] = loadSizeHelper{backupPath: strings.TrimLeft(backup.BackupPath, "/"), client: client, isOk: true}
+			continue
+		}
+		if clientMap[records[i].DefaultDownload].isOk {
+			wg.Add(1)
+			go func(index int) {
+				item.Size, _ = clientMap[records[index].DefaultDownload].client.Size(path.Join(clientMap[records[index].DefaultDownload].backupPath, itemPath))
+				datas = append(datas, item)
+				wg.Done()
+			}(i)
+		} else {
+			datas = append(datas, item)
+		}
+	}
+	wg.Wait()
+	return datas, nil
 }

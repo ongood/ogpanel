@@ -53,7 +53,7 @@ type WebsiteService struct {
 }
 
 type IWebsiteService interface {
-	PageWebsite(req request.WebsiteSearch) (int64, []response.WebsiteDTO, error)
+	PageWebsite(req request.WebsiteSearch) (int64, []response.WebsiteRes, error)
 	GetWebsites() ([]response.WebsiteDTO, error)
 	CreateWebsite(create request.WebsiteCreate) error
 	OpWebsite(req request.WebsiteOp) error
@@ -96,15 +96,18 @@ type IWebsiteService interface {
 	OperateRedirect(req request.NginxRedirectReq) (err error)
 	GetRedirect(id uint) (res []response.NginxRedirectConfig, err error)
 	UpdateRedirectFile(req request.NginxRedirectUpdate) (err error)
+
+	UpdateDefaultHtml(req request.WebsiteHtmlUpdate) error
+	GetDefaultHtml(resourceType string) (*response.WebsiteHtmlRes, error)
 }
 
 func NewIWebsiteService() IWebsiteService {
 	return &WebsiteService{}
 }
 
-func (w WebsiteService) PageWebsite(req request.WebsiteSearch) (int64, []response.WebsiteDTO, error) {
+func (w WebsiteService) PageWebsite(req request.WebsiteSearch) (int64, []response.WebsiteRes, error) {
 	var (
-		websiteDTOs []response.WebsiteDTO
+		websiteDTOs []response.WebsiteRes
 		opts        []repo.DBOption
 	)
 	nginxInstall, err := getAppInstallByKey(constant.AppOpenresty)
@@ -154,11 +157,22 @@ func (w WebsiteService) PageWebsite(req request.WebsiteSearch) (int64, []respons
 			runtimeName = runtime.Name
 		}
 		sitePath := path.Join(constant.AppInstallDir, constant.AppOpenresty, nginxInstall.Name, "www", "sites", web.Alias)
-		websiteDTOs = append(websiteDTOs, response.WebsiteDTO{
-			Website:     web,
-			AppName:     appName,
-			RuntimeName: runtimeName,
-			SitePath:    sitePath,
+
+		websiteDTOs = append(websiteDTOs, response.WebsiteRes{
+			ID:            web.ID,
+			CreatedAt:     web.CreatedAt,
+			Protocol:      web.Protocol,
+			PrimaryDomain: web.PrimaryDomain,
+			Type:          web.Type,
+			Remark:        web.Remark,
+			Status:        web.Status,
+			Alias:         web.Alias,
+			AppName:       appName,
+			ExpireDate:    web.ExpireDate,
+			SSLExpireDate: web.WebsiteSSL.ExpireDate,
+			SSLStatus:     checkSSLStatus(web.WebsiteSSL.ExpireDate),
+			RuntimeName:   runtimeName,
+			SitePath:      sitePath,
 		})
 	}
 	return total, websiteDTOs, nil
@@ -166,7 +180,7 @@ func (w WebsiteService) PageWebsite(req request.WebsiteSearch) (int64, []respons
 
 func (w WebsiteService) GetWebsites() ([]response.WebsiteDTO, error) {
 	var websiteDTOs []response.WebsiteDTO
-	websites, err := websiteRepo.List()
+	websites, err := websiteRepo.List(commonRepo.WithOrderRuleBy("primary_domain", "ascending"))
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +336,7 @@ func (w WebsiteService) CreateWebsite(create request.WebsiteCreate) (err error) 
 				}
 				website.Proxy = proxy
 			}
-		case constant.RuntimeNode:
+		case constant.RuntimeNode, constant.RuntimeJava, constant.RuntimeGo:
 			website.Proxy = fmt.Sprintf("127.0.0.1:%d", runtime.Port)
 		}
 	}
@@ -332,7 +346,8 @@ func (w WebsiteService) CreateWebsite(create request.WebsiteCreate) (err error) 
 	}
 
 	if len(create.FtpUser) != 0 && len(create.FtpPassword) != 0 {
-		itemID, err := NewIFtpService().Create(dto.FtpCreate{User: create.FtpUser, Password: create.FtpPassword, Path: path.Join(global.CONF.System.BaseDir, "1panel/apps/openresty/openresty/www/sites", website.Alias, "index")})
+		indexDir := path.Join(nginxInstall.GetPath(), "www", "sites", website.Alias, "index")
+		itemID, err := NewIFtpService().Create(dto.FtpCreate{User: create.FtpUser, Password: create.FtpPassword, Path: indexDir})
 		if err != nil {
 			global.LOG.Errorf("create ftp for website failed, err: %v", err)
 		}
@@ -427,6 +442,7 @@ func (w WebsiteService) GetWebsite(id uint) (response.WebsiteDTO, error) {
 	res.ErrorLogPath = path.Join(sitePath, "log", "error.log")
 	res.AccessLogPath = path.Join(sitePath, "log", "access.log")
 	res.SitePath = sitePath
+	res.SiteDir = website.SiteDir
 	return res, nil
 }
 
@@ -525,9 +541,7 @@ func (w WebsiteService) CreateWebsiteDomain(create request.WebsiteDomainCreate) 
 				}
 				for _, domain := range domainModels {
 					wafSite.Domains = append(wafSite.Domains, domain.Domain)
-					if domain.Port != 80 && domain.Port != 443 {
-						wafSite.Host = append(wafSite.Host, domain.Domain+":"+strconv.Itoa(domain.Port))
-					}
+					wafSite.Host = append(wafSite.Host, domain.Domain+":"+strconv.Itoa(domain.Port))
 				}
 				if len(wafSite.Host) == 0 {
 					wafSite.Host = []string{}
@@ -754,7 +768,7 @@ func (w WebsiteService) GetWebsiteHTTPS(websiteId uint) (response.WebsiteHTTPS, 
 	} else {
 		res.HttpConfig = constant.HTTPToHTTPS
 	}
-	params, err := getNginxParamsByKeys(constant.NginxScopeServer, []string{"ssl_protocols", "ssl_ciphers"}, &website)
+	params, err := getNginxParamsByKeys(constant.NginxScopeServer, []string{"ssl_protocols", "ssl_ciphers", "add_header"}, &website)
 	if err != nil {
 		return res, err
 	}
@@ -764,6 +778,9 @@ func (w WebsiteService) GetWebsiteHTTPS(websiteId uint) (response.WebsiteHTTPS, 
 		}
 		if p.Name == "ssl_ciphers" {
 			res.Algorithm = p.Params[0]
+		}
+		if p.Name == "add_header" && len(p.Params) > 0 && p.Params[0] == "Strict-Transport-Security" {
+			res.Hsts = true
 		}
 	}
 	return res, nil
@@ -782,7 +799,7 @@ func (w WebsiteService) OpWebsiteHTTPS(ctx context.Context, req request.WebsiteH
 	if err != nil {
 		return nil, err
 	}
-	if err = ChangeHSTSConfig(req.Enable, nginxInstall, website); err != nil {
+	if err = ChangeHSTSConfig(req.Hsts, nginxInstall, website); err != nil {
 		return nil, err
 	}
 	res.Enable = req.Enable
@@ -1005,7 +1022,7 @@ func (w WebsiteService) OpWebsiteLog(req request.WebsiteLogReq) (*response.Websi
 			}
 		}
 		filePath := path.Join(sitePath, "log", req.LogType)
-		lines, end, err := files.ReadFileByLine(filePath, req.Page, req.PageSize)
+		lines, end, _, err := files.ReadFileByLine(filePath, req.Page, req.PageSize, false)
 		if err != nil {
 			return nil, err
 		}
@@ -1616,9 +1633,6 @@ func (w WebsiteService) OperateProxy(req request.WebsiteProxyConfig) (err error)
 	}
 	location.UpdateDirective("proxy_pass", []string{req.ProxyPass})
 	location.UpdateDirective("proxy_set_header", []string{"Host", req.ProxyHost})
-	if website.Protocol == constant.ProtocolHTTPS {
-		location.UpdateDirective("add_header", []string{"Strict-Transport-Security", "\"max-age=31536000\""})
-	}
 	location.ChangePath(req.Modifier, req.Match)
 	if req.Cache {
 		location.AddCache(req.CacheTime, req.CacheUnit)
@@ -1629,6 +1643,11 @@ func (w WebsiteService) OperateProxy(req request.WebsiteProxyConfig) (err error)
 		location.AddSubFilter(req.Replaces)
 	} else {
 		location.RemoveSubFilter()
+	}
+	if req.SNI {
+		location.UpdateDirective("proxy_ssl_server_name", []string{"on"})
+	} else {
+		location.UpdateDirective("proxy_ssl_server_name", []string{"off"})
 	}
 	if err = nginx.WriteConfig(config, nginx.IndentedStyle); err != nil {
 		return buserr.WithErr(constant.ErrUpdateBuWebsite, err)
@@ -1705,6 +1724,11 @@ func (w WebsiteService) GetProxies(id uint) (res []request.WebsiteProxyConfig, e
 		proxyConfig.Modifier = location.Modifier
 		proxyConfig.ProxyHost = location.Host
 		proxyConfig.Replaces = location.Replaces
+		for _, directive := range location.Directives {
+			if directive.GetName() == "proxy_ssl_server_name" {
+				proxyConfig.SNI = directive.GetParameters()[0] == "on"
+			}
+		}
 		res = append(res, proxyConfig)
 	}
 	return
@@ -2447,4 +2471,92 @@ func (w WebsiteService) LoadWebsiteDirConfig(req request.WebsiteCommonReq) (*res
 	}
 
 	return res, nil
+}
+
+func (w WebsiteService) GetDefaultHtml(resourceType string) (*response.WebsiteHtmlRes, error) {
+	nginxInstall, err := getAppInstallByKey(constant.AppOpenresty)
+	if err != nil {
+		return nil, err
+	}
+	rootPath := path.Join(nginxInstall.GetPath(), "root")
+	fileOp := files.NewFileOp()
+	defaultPath := path.Join(rootPath, "default")
+	if !fileOp.Stat(defaultPath) {
+		_ = fileOp.CreateDir(defaultPath, 0755)
+	}
+
+	res := &response.WebsiteHtmlRes{}
+
+	switch resourceType {
+	case "404":
+		resourcePath := path.Join(defaultPath, "404.html")
+		if content, _ := getResourceContent(fileOp, resourcePath); content != "" {
+			res.Content = content
+			return res, nil
+		}
+		res.Content = string(nginx_conf.NotFoundHTML)
+		return res, nil
+	case "php":
+		resourcePath := path.Join(defaultPath, "index.php")
+		if content, _ := getResourceContent(fileOp, resourcePath); content != "" {
+			res.Content = content
+			return res, nil
+		}
+		res.Content = string(nginx_conf.IndexPHP)
+		return res, nil
+	case "index":
+		resourcePath := path.Join(defaultPath, "index.html")
+		if content, _ := getResourceContent(fileOp, resourcePath); content != "" {
+			res.Content = content
+			return res, nil
+		}
+		res.Content = string(nginx_conf.Index)
+		return res, nil
+	case "domain404":
+		resourcePath := path.Join(rootPath, "404.html")
+		if content, _ := getResourceContent(fileOp, resourcePath); content != "" {
+			res.Content = content
+			return res, nil
+		}
+		res.Content = string(nginx_conf.DomainNotFoundHTML)
+		return res, nil
+	case "stop":
+		resourcePath := path.Join(rootPath, "stop", "index.html")
+		if content, _ := getResourceContent(fileOp, resourcePath); content != "" {
+			res.Content = content
+			return res, nil
+		}
+		res.Content = string(nginx_conf.StopHTML)
+		return res, nil
+	}
+	return res, nil
+}
+
+func (w WebsiteService) UpdateDefaultHtml(req request.WebsiteHtmlUpdate) error {
+	nginxInstall, err := getAppInstallByKey(constant.AppOpenresty)
+	if err != nil {
+		return err
+	}
+	rootPath := path.Join(nginxInstall.GetPath(), "root")
+	fileOp := files.NewFileOp()
+	defaultPath := path.Join(rootPath, "default")
+	if !fileOp.Stat(defaultPath) {
+		_ = fileOp.CreateDir(defaultPath, 0755)
+	}
+	var resourcePath string
+	switch req.Type {
+	case "404":
+		resourcePath = path.Join(defaultPath, "404.html")
+	case "php":
+		resourcePath = path.Join(defaultPath, "index.php")
+	case "index":
+		resourcePath = path.Join(defaultPath, "index.html")
+	case "domain404":
+		resourcePath = path.Join(rootPath, "404.html")
+	case "stop":
+		resourcePath = path.Join(rootPath, "stop", "index.html")
+	default:
+		return nil
+	}
+	return fileOp.SaveFile(resourcePath, req.Content, 0644)
 }

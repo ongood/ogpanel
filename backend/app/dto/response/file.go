@@ -15,10 +15,12 @@ type UploadInfo struct {
 }
 
 type FileTree struct {
-	ID       string     `json:"id"`
-	Name     string     `json:"name"`
-	Path     string     `json:"path"`
-	Children []FileTree `json:"children"`
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	Path      string     `json:"path"`
+	IsDir     bool       `json:"isDir"`
+	Extension string     `json:"extension"`
+	Children  []FileTree `json:"children"`
 }
 
 type DirSizeRes struct {
@@ -37,6 +39,7 @@ type FileLineContent struct {
 	Content string `json:"content"`
 	End     bool   `json:"end"`
 	Path    string `json:"path"`
+	Total   int    `json:"total"`
 }
 
 type FileExist struct {

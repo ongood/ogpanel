@@ -106,3 +106,41 @@ export const updateFtp = (params: Toolbox.FtpUpdate) => {
 export const deleteFtp = (params: { ids: number[] }) => {
     return http.post(`/toolbox/ftp/del`, params);
 };
+
+// clam
+export const cleanClamRecord = (id: number) => {
+    return http.post(`/toolbox/clam/record/clean`, { id: id });
+};
+export const searchClamRecord = (param: Toolbox.ClamSearchLog) => {
+    return http.post<ResPage<Toolbox.ClamLog>>(`/toolbox/clam/record/search`, param);
+};
+export const getClamRecordLog = (param: Toolbox.ClamRecordReq) => {
+    return http.post<string>(`/toolbox/clam/record/log`, param);
+};
+export const searchClamFile = (name: string, tail: string) => {
+    return http.post<string>(`/toolbox/clam/file/search`, { name: name, tail: tail });
+};
+export const updateClamFile = (name: string, file: string) => {
+    return http.post(`/toolbox/clam/file/update`, { name: name, file: file }, TimeoutEnum.T_60S);
+};
+export const searchClamBaseInfo = () => {
+    return http.post<Toolbox.ClamBaseInfo>(`/toolbox/clam/base`);
+};
+export const updateClamBaseInfo = (operate: string) => {
+    return http.post(`/toolbox/clam/operate`, { Operation: operate }, TimeoutEnum.T_60S);
+};
+export const searchClam = (param: ReqPage) => {
+    return http.post<ResPage<Toolbox.ClamInfo>>(`/toolbox/clam/search`, param);
+};
+export const createClam = (params: Toolbox.ClamCreate) => {
+    return http.post(`/toolbox/clam`, params);
+};
+export const updateClam = (params: Toolbox.ClamUpdate) => {
+    return http.post(`/toolbox/clam/update`, params);
+};
+export const deleteClam = (params: { ids: number[]; removeRecord: boolean; removeInfected: boolean }) => {
+    return http.post(`/toolbox/clam/del`, params);
+};
+export const handleClamScan = (id: number) => {
+    return http.post(`/toolbox/clam/handle`, { id: id });
+};

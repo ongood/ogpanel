@@ -21,7 +21,7 @@ import (
 type CronjobService struct{}
 
 type ICronjobService interface {
-	SearchWithPage(search dto.SearchWithPage) (int64, interface{}, error)
+	SearchWithPage(search dto.PageCronjob) (int64, interface{}, error)
 	SearchRecords(search dto.SearchRecord) (int64, interface{}, error)
 	Create(cronjobDto dto.CronjobCreate) error
 	HandleOnce(id uint) error
@@ -39,7 +39,7 @@ func NewICronjobService() ICronjobService {
 	return &CronjobService{}
 }
 
-func (u *CronjobService) SearchWithPage(search dto.SearchWithPage) (int64, interface{}, error) {
+func (u *CronjobService) SearchWithPage(search dto.PageCronjob) (int64, interface{}, error) {
 	total, cronjobs, err := cronjobRepo.Page(search.Page, search.PageSize, commonRepo.WithLikeName(search.Info), commonRepo.WithOrderRuleBy(search.OrderBy, search.Order))
 	var dtoCronjobs []dto.CronjobInfo
 	for _, cronjob := range cronjobs {
@@ -49,7 +49,7 @@ func (u *CronjobService) SearchWithPage(search dto.SearchWithPage) (int64, inter
 		}
 		record, _ := cronjobRepo.RecordFirst(cronjob.ID)
 		if record.ID != 0 {
-			item.LastRecordTime = record.StartTime.Format("2006-01-02 15:04:05")
+			item.LastRecordTime = record.StartTime.Format(constant.DateTimeLayout)
 		} else {
 			item.LastRecordTime = "-"
 		}
@@ -71,7 +71,7 @@ func (u *CronjobService) SearchRecords(search dto.SearchRecord) (int64, interfac
 		if err := copier.Copy(&item, &record); err != nil {
 			return 0, nil, errors.WithMessage(constant.ErrStructTransform, err.Error())
 		}
-		item.StartTime = record.StartTime.Format("2006-01-02 15:04:05")
+		item.StartTime = record.StartTime.Format(constant.DateTimeLayout)
 		dtoCronjobs = append(dtoCronjobs, item)
 	}
 	return total, dtoCronjobs, err
@@ -330,7 +330,7 @@ func mkdirAndWriteFile(cronjob *model.Cronjob, startTime time.Time, msg []byte) 
 		}
 	}
 
-	path := fmt.Sprintf("%s/%s.log", dir, startTime.Format("20060102150405"))
+	path := fmt.Sprintf("%s/%s.log", dir, startTime.Format(constant.DateTimeSlimLayout))
 	global.LOG.Infof("cronjob %s has generated some logs %s", cronjob.Name, path)
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {

@@ -242,43 +242,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/apps/installed/:appInstallId/versions": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "通过 install id 获取应用更新版本",
-                "consumes": [
-                    "application/json"
-                ],
-                "tags": [
-                    "App"
-                ],
-                "summary": "Search app update version by install id",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "request",
-                        "name": "appInstallId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.AppVersion"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/apps/installed/check": {
             "post": {
                 "security": [
@@ -777,6 +740,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/apps/installed/update/versions": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "通过 install id 获取应用更新版本",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "App"
+                ],
+                "summary": "Search app update version by install id",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "request",
+                        "name": "appInstallId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.AppVersion"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/apps/search": {
             "post": {
                 "security": [
@@ -1108,6 +1108,34 @@ const docTemplate = `{
                     "formatEN": "clean container [name] logs",
                     "formatZH": "清理容器 [name] 日志",
                     "paramKeys": []
+                }
+            }
+        },
+        "/containers/commit": {
+            "post": {
+                "description": "容器提交生成新镜像",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Container"
+                ],
+                "summary": "Commit Container",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ContainerCommit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
                 }
             }
         },
@@ -1555,6 +1583,12 @@ const docTemplate = `{
                         }
                     }
                 }
+            }
+        },
+        "/containers/download/log": {
+            "post": {
+                "description": "下载容器日志",
+                "responses": {}
             }
         },
         "/containers/image": {
@@ -3636,7 +3670,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.SearchWithPage"
+                            "$ref": "#/definitions/dto.PageCronjob"
                         }
                     }
                 ],
@@ -8006,6 +8040,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/hosts/firewall/forward": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "更新防火墙端口转发规则",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firewall"
+                ],
+                "summary": "Create group",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ForwardRuleOperate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "x-panel-log": {
+                    "BeforeFunctions": [],
+                    "bodyKeys": [
+                        "source_port"
+                    ],
+                    "formatEN": "update port forward rules [source_port]",
+                    "formatZH": "更新端口转发规则 [source_port]",
+                    "paramKeys": []
+                }
+            }
+        },
         "/hosts/firewall/ip": {
             "post": {
                 "security": [
@@ -10995,6 +11071,478 @@ const docTemplate = `{
                 }
             }
         },
+        "/toolbox/clam": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "创建扫描规则",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Create clam",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ClamCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "x-panel-log": {
+                    "BeforeFunctions": [],
+                    "bodyKeys": [
+                        "name",
+                        "path"
+                    ],
+                    "formatEN": "create clam [name][path]",
+                    "formatZH": "创建扫描规则 [name][path]",
+                    "paramKeys": []
+                }
+            }
+        },
+        "/toolbox/clam/base": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "获取 Clam 基础信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Load clam base info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ClamBaseInfo"
+                        }
+                    }
+                }
+            }
+        },
+        "/toolbox/clam/del": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "删除扫描规则",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Delete clam",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ClamDelete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "x-panel-log": {
+                    "BeforeFunctions": [
+                        {
+                            "db": "clams",
+                            "input_column": "id",
+                            "input_value": "ids",
+                            "isList": true,
+                            "output_column": "name",
+                            "output_value": "names"
+                        }
+                    ],
+                    "bodyKeys": [
+                        "ids"
+                    ],
+                    "formatEN": "delete clam [names]",
+                    "formatZH": "删除扫描规则 [names]",
+                    "paramKeys": []
+                }
+            }
+        },
+        "/toolbox/clam/file/search": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "获取扫描文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Load clam file",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ClamFileReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PageResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/toolbox/clam/file/update": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "更新病毒扫描配置文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Update clam file",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateByNameAndFile"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/toolbox/clam/handle": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "执行病毒扫描",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Handle clam scan",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.OperateByID"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "x-panel-log": {
+                    "BeforeFunctions": [
+                        {
+                            "db": "clams",
+                            "input_column": "id",
+                            "input_value": "id",
+                            "isList": true,
+                            "output_column": "name",
+                            "output_value": "name"
+                        }
+                    ],
+                    "bodyKeys": [
+                        "id"
+                    ],
+                    "formatEN": "handle clam scan [name]",
+                    "formatZH": "执行病毒扫描 [name]",
+                    "paramKeys": []
+                }
+            }
+        },
+        "/toolbox/clam/operate": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "修改 Clam 状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Operate Clam",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.Operate"
+                        }
+                    }
+                ],
+                "responses": {},
+                "x-panel-log": {
+                    "BeforeFunctions": [],
+                    "bodyKeys": [
+                        "operation"
+                    ],
+                    "formatEN": "[operation] FTP",
+                    "formatZH": "[operation] Clam",
+                    "paramKeys": []
+                }
+            }
+        },
+        "/toolbox/clam/record/clean": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "清空扫描报告",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Clean clam record",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.OperateByID"
+                        }
+                    }
+                ],
+                "responses": {},
+                "x-panel-log": {
+                    "BeforeFunctions": [
+                        {
+                            "db": "clams",
+                            "input_column": "id",
+                            "input_value": "id",
+                            "isList": true,
+                            "output_column": "name",
+                            "output_value": "name"
+                        }
+                    ],
+                    "bodyKeys": [
+                        "id"
+                    ],
+                    "formatEN": "clean clam record [name]",
+                    "formatZH": "清空扫描报告 [name]",
+                    "paramKeys": []
+                }
+            }
+        },
+        "/toolbox/clam/record/log": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "获取扫描结果详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Load clam record detail",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ClamLogReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/toolbox/clam/record/search": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "获取扫描结果列表分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Page clam record",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ClamLogSearch"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PageResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/toolbox/clam/search": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "获取扫描规则列表分页",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Page clam",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.SearchWithPage"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PageResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/toolbox/clam/update": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "修改扫描规则",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Clam"
+                ],
+                "summary": "Update clam",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ClamUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "x-panel-log": {
+                    "BeforeFunctions": [],
+                    "bodyKeys": [
+                        "name",
+                        "path"
+                    ],
+                    "formatEN": "update clam [name][path]",
+                    "formatZH": "修改扫描规则 [name][path]",
+                    "paramKeys": []
+                }
+            }
+        },
         "/toolbox/clean": {
             "post": {
                 "security": [
@@ -12380,6 +12928,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/websites/ca/download": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "下载 CA 证书文件",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Website CA"
+                ],
+                "summary": "Download CA file",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.WebsiteResourceReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "x-panel-log": {
+                    "BeforeFunctions": [
+                        {
+                            "db": "website_cas",
+                            "input_column": "id",
+                            "input_value": "id",
+                            "isList": false,
+                            "output_column": "name",
+                            "output_value": "name"
+                        }
+                    ],
+                    "bodyKeys": [
+                        "id"
+                    ],
+                    "formatEN": "download ca file [name]",
+                    "formatZH": "下载 CA 证书文件 [name]",
+                    "paramKeys": []
+                }
+            }
+        },
         "/websites/ca/obtain": {
             "post": {
                 "security": [
@@ -12674,6 +13273,73 @@ const docTemplate = `{
                     ],
                     "formatEN": "Nginx conf update [domain]",
                     "formatZH": "nginx 配置修改 [domain]",
+                    "paramKeys": []
+                }
+            }
+        },
+        "/websites/default/html/:type": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "获取默认 html",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Website"
+                ],
+                "summary": "Get default html",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.FileInfo"
+                        }
+                    }
+                }
+            }
+        },
+        "/websites/default/html/update": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "更新默认 html",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Website"
+                ],
+                "summary": "Update default html",
+                "parameters": [
+                    {
+                        "description": "request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.WebsiteHtmlUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "x-panel-log": {
+                    "BeforeFunctions": [],
+                    "bodyKeys": [
+                        "type"
+                    ],
+                    "formatEN": "Update default html",
+                    "formatZH": "更新默认 html",
                     "paramKeys": []
                 }
             }
@@ -14612,6 +15278,9 @@ const docTemplate = `{
                 "detailId": {
                     "type": "integer"
                 },
+                "dockerCompose": {
+                    "type": "string"
+                },
                 "version": {
                     "type": "string"
                 }
@@ -14850,14 +15519,151 @@ const docTemplate = `{
         "dto.ChangeRedisPass": {
             "type": "object",
             "required": [
-                "database",
-                "value"
+                "database"
             ],
             "properties": {
                 "database": {
                     "type": "string"
                 },
                 "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ClamBaseInfo": {
+            "type": "object",
+            "properties": {
+                "freshIsActive": {
+                    "type": "boolean"
+                },
+                "freshIsExist": {
+                    "type": "boolean"
+                },
+                "freshVersion": {
+                    "type": "string"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "isExist": {
+                    "type": "boolean"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ClamCreate": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "infectedDir": {
+                    "type": "string"
+                },
+                "infectedStrategy": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ClamDelete": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "removeInfected": {
+                    "type": "boolean"
+                },
+                "removeRecord": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "dto.ClamFileReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "tail": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ClamLogReq": {
+            "type": "object",
+            "properties": {
+                "clamName": {
+                    "type": "string"
+                },
+                "recordName": {
+                    "type": "string"
+                },
+                "tail": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ClamLogSearch": {
+            "type": "object",
+            "required": [
+                "page",
+                "pageSize"
+            ],
+            "properties": {
+                "clamID": {
+                    "type": "integer"
+                },
+                "endTime": {
+                    "type": "string"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "startTime": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ClamUpdate": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "infectedDir": {
+                    "type": "string"
+                },
+                "infectedStrategy": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "path": {
                     "type": "string"
                 }
             }
@@ -14947,6 +15753,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "secret": {
+                    "type": "string"
+                },
                 "type": {
                     "type": "string",
                     "enum": [
@@ -14974,6 +15783,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "secret": {
                     "type": "string"
                 },
                 "source": {
@@ -15125,6 +15937,32 @@ const docTemplate = `{
                 },
                 "path": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.ContainerCommit": {
+            "type": "object",
+            "required": [
+                "containerID"
+            ],
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "containerID": {
+                    "type": "string"
+                },
+                "containerName": {
+                    "type": "string"
+                },
+                "newImageName": {
+                    "type": "string"
+                },
+                "pause": {
+                    "type": "boolean"
                 }
             }
         },
@@ -15450,6 +16288,9 @@ const docTemplate = `{
                 "script": {
                     "type": "string"
                 },
+                "secret": {
+                    "type": "string"
+                },
                 "sourceDir": {
                     "type": "string"
                 },
@@ -15525,6 +16366,9 @@ const docTemplate = `{
                     "minimum": 1
                 },
                 "script": {
+                    "type": "string"
+                },
+                "secret": {
                     "type": "string"
                 },
                 "sourceDir": {
@@ -15814,7 +16658,6 @@ const docTemplate = `{
             "required": [
                 "from",
                 "name",
-                "password",
                 "type",
                 "username",
                 "version"
@@ -15983,6 +16826,8 @@ const docTemplate = `{
         "dto.DatabaseSearch": {
             "type": "object",
             "required": [
+                "order",
+                "orderBy",
                 "page",
                 "pageSize"
             ],
@@ -15991,10 +16836,19 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "order": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "null",
+                        "ascending",
+                        "descending"
+                    ]
                 },
                 "orderBy": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "name",
+                        "created_at"
+                    ]
                 },
                 "page": {
                     "type": "integer"
@@ -16010,7 +16864,6 @@ const docTemplate = `{
         "dto.DatabaseUpdate": {
             "type": "object",
             "required": [
-                "password",
                 "type",
                 "username",
                 "version"
@@ -16318,6 +17171,52 @@ const docTemplate = `{
                 },
                 "vars": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.ForwardRuleOperate": {
+            "type": "object",
+            "properties": {
+                "rules": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "operation",
+                            "port",
+                            "protocol",
+                            "targetPort"
+                        ],
+                        "properties": {
+                            "num": {
+                                "type": "string"
+                            },
+                            "operation": {
+                                "type": "string",
+                                "enum": [
+                                    "add",
+                                    "remove"
+                                ]
+                            },
+                            "port": {
+                                "type": "string"
+                            },
+                            "protocol": {
+                                "type": "string",
+                                "enum": [
+                                    "tcp",
+                                    "udp",
+                                    "tcp/udp"
+                                ]
+                            },
+                            "targetIP": {
+                                "type": "string"
+                            },
+                            "targetPort": {
+                                "type": "string"
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -17079,6 +17978,8 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "database",
+                "order",
+                "orderBy",
                 "page",
                 "pageSize"
             ],
@@ -17090,10 +17991,19 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "order": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "null",
+                        "ascending",
+                        "descending"
+                    ]
                 },
                 "orderBy": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "name",
+                        "created_at"
+                    ]
                 },
                 "page": {
                     "type": "integer"
@@ -17507,6 +18417,9 @@ const docTemplate = `{
         "dto.OsInfo": {
             "type": "object",
             "properties": {
+                "diskSize": {
+                    "type": "integer"
+                },
                 "kernelArch": {
                     "type": "string"
                 },
@@ -17527,6 +18440,8 @@ const docTemplate = `{
         "dto.PageContainer": {
             "type": "object",
             "required": [
+                "order",
+                "orderBy",
                 "page",
                 "pageSize",
                 "state"
@@ -17542,10 +18457,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "order": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "null",
+                        "ascending",
+                        "descending"
+                    ]
                 },
                 "orderBy": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "name",
+                        "status",
+                        "created_at"
+                    ]
                 },
                 "page": {
                     "type": "integer"
@@ -17565,6 +18490,42 @@ const docTemplate = `{
                         "exited",
                         "dead"
                     ]
+                }
+            }
+        },
+        "dto.PageCronjob": {
+            "type": "object",
+            "required": [
+                "order",
+                "orderBy",
+                "page",
+                "pageSize"
+            ],
+            "properties": {
+                "info": {
+                    "type": "string"
+                },
+                "order": {
+                    "type": "string",
+                    "enum": [
+                        "null",
+                        "ascending",
+                        "descending"
+                    ]
+                },
+                "orderBy": {
+                    "type": "string",
+                    "enum": [
+                        "name",
+                        "status",
+                        "created_at"
+                    ]
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
                 }
             }
         },
@@ -17810,6 +18771,8 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "database",
+                "order",
+                "orderBy",
                 "page",
                 "pageSize"
             ],
@@ -17821,10 +18784,19 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "order": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "null",
+                        "ascending",
+                        "descending"
+                    ]
                 },
                 "orderBy": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "name",
+                        "created_at"
+                    ]
                 },
                 "page": {
                     "type": "integer"
@@ -18415,12 +19387,6 @@ const docTemplate = `{
                 "info": {
                     "type": "string"
                 },
-                "order": {
-                    "type": "string"
-                },
-                "orderBy": {
-                    "type": "string"
-                },
                 "page": {
                     "type": "integer"
                 },
@@ -18643,6 +19609,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "secret": {
+                    "type": "string"
                 }
             }
         },
@@ -18678,6 +19647,9 @@ const docTemplate = `{
                 },
                 "reDownload": {
                     "type": "boolean"
+                },
+                "secret": {
+                    "type": "string"
                 }
             }
         },
@@ -18879,6 +19851,9 @@ const docTemplate = `{
                 },
                 "group": {
                     "type": "string"
+                },
+                "isDetail": {
+                    "type": "boolean"
                 },
                 "isDir": {
                     "type": "boolean"
@@ -19303,6 +20278,9 @@ const docTemplate = `{
                 "domains": {
                     "type": "string"
                 },
+                "execShell": {
+                    "type": "boolean"
+                },
                 "expireDate": {
                     "type": "string"
                 },
@@ -19338,6 +20316,9 @@ const docTemplate = `{
                 },
                 "pushDir": {
                     "type": "boolean"
+                },
+                "shell": {
+                    "type": "string"
                 },
                 "skipDNS": {
                     "type": "boolean"
@@ -19471,6 +20452,9 @@ const docTemplate = `{
                 },
                 "detailId": {
                     "type": "integer"
+                },
+                "dockerCompose": {
+                    "type": "string"
                 },
                 "forceDelete": {
                     "type": "boolean"
@@ -19689,6 +20673,9 @@ const docTemplate = `{
                 "replace": {
                     "type": "boolean"
                 },
+                "secret": {
+                    "type": "string"
+                },
                 "type": {
                     "type": "string"
                 }
@@ -19700,6 +20687,9 @@ const docTemplate = `{
                 "path"
             ],
             "properties": {
+                "isDetail": {
+                    "type": "boolean"
+                },
                 "path": {
                     "type": "string"
                 }
@@ -19749,6 +20739,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "path": {
+                    "type": "string"
+                },
+                "secret": {
                     "type": "string"
                 },
                 "type": {
@@ -19852,6 +20845,9 @@ const docTemplate = `{
                 "expand": {
                     "type": "boolean"
                 },
+                "isDetail": {
+                    "type": "boolean"
+                },
                 "page": {
                     "type": "integer"
                 },
@@ -19896,6 +20892,9 @@ const docTemplate = `{
             "properties": {
                 "ID": {
                     "type": "integer"
+                },
+                "latest": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"
@@ -20838,6 +21837,9 @@ const docTemplate = `{
                 "domains": {
                     "type": "string"
                 },
+                "execShell": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -20857,6 +21859,9 @@ const docTemplate = `{
                 },
                 "renew": {
                     "type": "boolean"
+                },
+                "shell": {
+                    "type": "string"
                 },
                 "sslID": {
                     "type": "integer"
@@ -21105,6 +22110,9 @@ const docTemplate = `{
                 "enable": {
                     "type": "boolean"
                 },
+                "hsts": {
+                    "type": "boolean"
+                },
                 "httpConfig": {
                     "type": "string",
                     "enum": [
@@ -21135,6 +22143,21 @@ const docTemplate = `{
                 },
                 "websiteSSLId": {
                     "type": "integer"
+                }
+            }
+        },
+        "request.WebsiteHtmlUpdate": {
+            "type": "object",
+            "required": [
+                "content",
+                "type"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },
@@ -21325,6 +22348,9 @@ const docTemplate = `{
                     "additionalProperties": {
                         "type": "string"
                     }
+                },
+                "sni": {
+                    "type": "boolean"
                 }
             }
         },
@@ -21399,6 +22425,9 @@ const docTemplate = `{
                 "dnsAccountId": {
                     "type": "integer"
                 },
+                "execShell": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -21422,6 +22451,9 @@ const docTemplate = `{
                 },
                 "pushDir": {
                     "type": "boolean"
+                },
+                "shell": {
+                    "type": "string"
                 },
                 "skipDNS": {
                     "type": "boolean"
@@ -21449,7 +22481,6 @@ const docTemplate = `{
         "request.WebsiteSSLUpdate": {
             "type": "object",
             "required": [
-                "acmeAccountId",
                 "id",
                 "primaryDomain",
                 "provider"
@@ -21476,6 +22507,9 @@ const docTemplate = `{
                 "dnsAccountId": {
                     "type": "integer"
                 },
+                "execShell": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -21499,6 +22533,9 @@ const docTemplate = `{
                 },
                 "pushDir": {
                     "type": "boolean"
+                },
+                "shell": {
+                    "type": "string"
                 },
                 "skipDNS": {
                     "type": "boolean"
@@ -21541,6 +22578,8 @@ const docTemplate = `{
         "request.WebsiteSearch": {
             "type": "object",
             "required": [
+                "order",
+                "orderBy",
                 "page",
                 "pageSize"
             ],
@@ -21549,10 +22588,21 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "order": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "null",
+                        "ascending",
+                        "descending"
+                    ]
                 },
                 "orderBy": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "primary_domain",
+                        "type",
+                        "status",
+                        "created_at"
+                    ]
                 },
                 "page": {
                     "type": "integer"
@@ -21869,6 +22919,9 @@ const docTemplate = `{
                 "group": {
                     "type": "string"
                 },
+                "isDetail": {
+                    "type": "boolean"
+                },
                 "isDir": {
                     "type": "boolean"
                 },
@@ -21931,8 +22984,14 @@ const docTemplate = `{
                         "$ref": "#/definitions/response.FileTree"
                     }
                 },
+                "extension": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
+                },
+                "isDir": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"
@@ -22255,6 +23314,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "enable": {
+                    "type": "boolean"
+                },
+                "hsts": {
                     "type": "boolean"
                 },
                 "httpConfig": {

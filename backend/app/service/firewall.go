@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,6 +29,7 @@ type IFirewallService interface {
 	SearchWithPage(search dto.RuleSearch) (int64, interface{}, error)
 	OperateFirewall(operation string) error
 	OperatePortRule(req dto.PortRuleOperate, reload bool) error
+	OperateForwardRule(req dto.ForwardRuleOperate) error
 	OperateAddressRule(req dto.AddrRuleOperate, reload bool) error
 	UpdatePortRule(req dto.PortRuleUpdate) error
 	UpdateAddrRule(req dto.AddrRuleUpdate) error
@@ -78,42 +80,39 @@ func (u *FirewallService) SearchWithPage(req dto.RuleSearch) (int64, interface{}
 	if err != nil {
 		return 0, nil, err
 	}
-	if req.Type == "port" {
-		ports, err := client.ListPort()
-		if err != nil {
-			return 0, nil, err
-		}
-		if len(req.Info) != 0 {
-			for _, port := range ports {
-				if strings.Contains(port.Port, req.Info) {
-					datas = append(datas, port)
-				}
-			}
-		} else {
-			datas = ports
-		}
-	} else {
-		addrs, err := client.ListAddress()
-		if err != nil {
-			return 0, nil, err
-		}
-		if len(req.Info) != 0 {
-			for _, addr := range addrs {
-				if strings.Contains(addr.Address, req.Info) {
-					datas = append(datas, addr)
-				}
-			}
-		} else {
-			datas = addrs
-		}
+
+	var rules []fireClient.FireInfo
+	switch req.Type {
+	case "port":
+		rules, err = client.ListPort()
+	case "forward":
+		rules, err = client.ListForward()
+	case "address":
+		rules, err = client.ListAddress()
+	}
+	if err != nil {
+		return 0, nil, err
 	}
 
+	if len(req.Info) != 0 {
+		for _, addr := range rules {
+			if strings.Contains(addr.Address, req.Info) ||
+				strings.Contains(addr.Port, req.Info) ||
+				strings.Contains(addr.TargetPort, req.Info) ||
+				strings.Contains(addr.TargetIP, req.Info) {
+				datas = append(datas, addr)
+			}
+		}
+	} else {
+		datas = rules
+	}
 	if req.Type == "port" {
 		apps := u.loadPortByApp()
 		for i := 0; i < len(datas); i++ {
 			datas[i].UsedStatus = checkPortUsed(datas[i].Port, datas[i].Protocol, apps)
 		}
 	}
+
 	var datasFilterStatus []fireClient.FireInfo
 	if len(req.Status) != 0 {
 		for _, data := range datas {
@@ -127,6 +126,7 @@ func (u *FirewallService) SearchWithPage(req dto.RuleSearch) (int64, interface{}
 	} else {
 		datasFilterStatus = datas
 	}
+
 	var datasFilterStrategy []fireClient.FireInfo
 	if len(req.Strategy) != 0 {
 		for _, data := range datasFilterStatus {
@@ -296,6 +296,52 @@ func (u *FirewallService) OperatePortRule(req dto.PortRuleOperate, reload bool) 
 
 	if reload {
 		return client.Reload()
+	}
+	return nil
+}
+
+func (u *FirewallService) OperateForwardRule(req dto.ForwardRuleOperate) error {
+	client, err := firewall.NewFirewallClient()
+	if err != nil {
+		return err
+	}
+
+	rules, _ := client.ListForward()
+	for _, rule := range rules {
+		for _, reqRule := range req.Rules {
+			if reqRule.Operation == "remove" {
+				continue
+			}
+			if reqRule.TargetIP == "" {
+				reqRule.TargetIP = "127.0.0.1"
+			}
+			if reqRule.Port == rule.Port && reqRule.TargetPort == rule.TargetPort && reqRule.TargetIP == rule.TargetIP {
+				return constant.ErrRecordExist
+			}
+		}
+	}
+
+	sort.SliceStable(req.Rules, func(i, j int) bool {
+		n1, _ := strconv.Atoi(req.Rules[i].Num)
+		n2, _ := strconv.Atoi(req.Rules[j].Num)
+		return n1 > n2
+	})
+
+	for _, r := range req.Rules {
+		for _, p := range strings.Split(r.Protocol, "/") {
+			if r.TargetIP == "" {
+				r.TargetIP = "127.0.0.1"
+			}
+			if err = client.PortForward(fireClient.Forward{
+				Num:        r.Num,
+				Protocol:   p,
+				Port:       r.Port,
+				TargetIP:   r.TargetIP,
+				TargetPort: r.TargetPort,
+			}, r.Operation); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

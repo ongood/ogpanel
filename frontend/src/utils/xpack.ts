@@ -28,16 +28,19 @@ export function initFavicon() {
 }
 
 export async function getXpackSetting() {
-    const searchXSettingGlob = import.meta.glob('xpack/api/modules/setting.ts');
-    const module = await searchXSettingGlob?.['../xpack/api/modules/setting.ts']?.();
-    const res = await module?.searchXSetting();
-    if (!res) {
+    let searchXSetting;
+    const xpackModules = import.meta.glob('../xpack/api/modules/setting.ts', { eager: true });
+    if (xpackModules['../xpack/api/modules/setting.ts']) {
+        searchXSetting = xpackModules['../xpack/api/modules/setting.ts']['searchXSetting'] || {};
+        const res = await searchXSetting();
+        if (!res) {
+            initFavicon();
+            resetXSetting();
+            return;
+        }
         initFavicon();
-        resetXSetting();
-        return;
+        return res;
     }
-    initFavicon();
-    return res;
 }
 
 const loadDataFromDB = async () => {
@@ -53,7 +56,6 @@ export async function loadProductProFromDB() {
     if (!res.data) {
         resetXSetting();
         globalStore.isProductPro = false;
-        return;
     } else {
         globalStore.isProductPro =
             res.data.status === 'Enable' || res.data.status === 'Lost01' || res.data.status === 'Lost02';
@@ -88,24 +90,30 @@ export async function getXpackSettingForTheme() {
         return;
     }
 
-    const searchXSettingGlob = import.meta.glob('xpack/api/modules/setting.ts');
-    const module = await searchXSettingGlob?.['../xpack/api/modules/setting.ts']?.();
-    const res2 = await module?.searchXSetting();
-    if (res2) {
-        globalStore.themeConfig.title = res2.data?.title;
-        globalStore.themeConfig.logo = res2.data?.logo;
-        globalStore.themeConfig.logoWithText = res2.data?.logoWithText;
-        globalStore.themeConfig.favicon = res2.data?.favicon;
-        globalStore.themeConfig.isGold = res2.data?.theme === 'dark-gold';
-    } else {
-        resetXSetting();
+    let searchXSetting;
+    const xpackModules = import.meta.glob('../xpack/api/modules/setting.ts', { eager: true });
+    if (xpackModules['../xpack/api/modules/setting.ts']) {
+        searchXSetting = xpackModules['../xpack/api/modules/setting.ts']['searchXSetting'] || {};
+        const res2 = await searchXSetting();
+        if (res2) {
+            globalStore.themeConfig.title = res2.data?.title;
+            globalStore.themeConfig.logo = res2.data?.logo;
+            globalStore.themeConfig.logoWithText = res2.data?.logoWithText;
+            globalStore.themeConfig.favicon = res2.data?.favicon;
+            globalStore.themeConfig.isGold = res2.data?.theme === 'dark-gold';
+        } else {
+            resetXSetting();
+        }
     }
     switchTheme();
     initFavicon();
 }
 
 export async function updateXpackSettingByKey(key: string, value: string) {
-    const searchXSettingGlob = import.meta.glob('xpack/api/modules/setting.ts');
-    const module = await searchXSettingGlob?.['../xpack/api/modules/setting.ts']?.();
-    return module?.updateXSettingByKey(key, value);
+    let updateXSettingByKey;
+    const xpackModules = import.meta.glob('../xpack/api/modules/setting.ts', { eager: true });
+    if (xpackModules['../xpack/api/modules/setting.ts']) {
+        updateXSettingByKey = xpackModules['../xpack/api/modules/setting.ts']['updateXSettingByKey'] || {};
+        return updateXSettingByKey(key, value);
+    }
 }

@@ -1,11 +1,14 @@
 package service
 
 import (
+	"bufio"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +19,8 @@ import (
 	"syscall"
 	"time"
 	"unicode/utf8"
+
+	"github.com/gin-gonic/gin"
 
 	"github.com/pkg/errors"
 
@@ -60,9 +65,11 @@ type IContainerService interface {
 	ContainerListStats() ([]dto.ContainerListStats, error)
 	LoadResourceLimit() (*dto.ResourceLimit, error)
 	ContainerRename(req dto.ContainerRename) error
+	ContainerCommit(req dto.ContainerCommit) error
 	ContainerLogClean(req dto.OperationWithName) error
 	ContainerOperation(req dto.ContainerOperation) error
 	ContainerLogs(wsConn *websocket.Conn, containerType, container, since, tail string, follow bool) error
+	DownloadContainerLogs(containerType, container, since, tail string, c *gin.Context) error
 	ContainerStats(id string) (*dto.ContainerStats, error)
 	Inspect(req dto.InspectReq) (string, error)
 	DeleteNetwork(req dto.BatchDelete) error
@@ -183,7 +190,7 @@ func (u *ContainerService) Page(req dto.PageContainer) (int64, interface{}, erro
 		ports := loadContainerPort(item.Ports)
 		info := dto.ContainerInfo{
 			ContainerID:   item.ID,
-			CreateTime:    time.Unix(item.Created, 0).Format("2006-01-02 15:04:05"),
+			CreateTime:    time.Unix(item.Created, 0).Format(constant.DateTimeLayout),
 			Name:          item.Names[0][1:],
 			ImageId:       strings.Split(item.ImageID, ":")[1],
 			ImageName:     item.Image,
@@ -597,6 +604,28 @@ func (u *ContainerService) ContainerRename(req dto.ContainerRename) error {
 	return client.ContainerRename(ctx, req.Name, req.NewName)
 }
 
+func (u *ContainerService) ContainerCommit(req dto.ContainerCommit) error {
+	ctx := context.Background()
+	client, err := docker.NewDockerClient()
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	options := container.CommitOptions{
+		Reference: req.NewImageName,
+		Comment:   req.Comment,
+		Author:    req.Author,
+		Changes:   nil,
+		Pause:     req.Pause,
+		Config:    nil,
+	}
+	_, err = client.ContainerCommit(ctx, req.ContainerId, options)
+	if err != nil {
+		return fmt.Errorf("failed to commit container, err: %v", err)
+	}
+	return nil
+}
+
 func (u *ContainerService) ContainerOperation(req dto.ContainerOperation) error {
 	var err error
 	ctx := context.Background()
@@ -746,6 +775,79 @@ func (u *ContainerService) ContainerLogs(wsConn *websocket.Conn, containerType, 
 	return nil
 }
 
+func (u *ContainerService) DownloadContainerLogs(containerType, container, since, tail string, c *gin.Context) error {
+	if cmd.CheckIllegal(container, since, tail) {
+		return buserr.New(constant.ErrCmdIllegal)
+	}
+	commandName := "docker"
+	commandArg := []string{"logs", container}
+	if containerType == "compose" {
+		commandName = "docker-compose"
+		commandArg = []string{"-f", container, "logs"}
+	}
+	if tail != "0" {
+		commandArg = append(commandArg, "--tail")
+		commandArg = append(commandArg, tail)
+	}
+	if since != "all" {
+		commandArg = append(commandArg, "--since")
+		commandArg = append(commandArg, since)
+	}
+
+	cmd := exec.Command(commandName, commandArg...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		_ = cmd.Process.Signal(syscall.SIGTERM)
+		return err
+	}
+	cmd.Stderr = cmd.Stdout
+	if err := cmd.Start(); err != nil {
+		_ = cmd.Process.Signal(syscall.SIGTERM)
+		return err
+	}
+
+	tempFile, err := os.CreateTemp("", "cmd_output_*.txt")
+	if err != nil {
+		return err
+	}
+	defer tempFile.Close()
+	defer func() {
+		if err := os.Remove(tempFile.Name()); err != nil {
+			global.LOG.Errorf("os.Remove() failed: %v", err)
+		}
+	}()
+	errCh := make(chan error)
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if _, err := tempFile.WriteString(line + "\n"); err != nil {
+				errCh <- err
+				return
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			errCh <- err
+			return
+		}
+		errCh <- nil
+	}()
+	select {
+	case err := <-errCh:
+		if err != nil {
+			global.LOG.Errorf("Error: %v", err)
+		}
+	case <-time.After(3 * time.Second):
+		global.LOG.Errorf("Timeout reached")
+	}
+	info, _ := tempFile.Stat()
+
+	c.Header("Content-Length", strconv.FormatInt(info.Size(), 10))
+	c.Header("Content-Disposition", "attachment; filename*=utf-8''"+url.PathEscape(info.Name()))
+	http.ServeContent(c.Writer, c.Request, info.Name(), info.ModTime(), tempFile)
+	return nil
+}
+
 func (u *ContainerService) ContainerStats(id string) (*dto.ContainerStats, error) {
 	client, err := docker.NewDockerClient()
 	if err != nil {
@@ -887,12 +989,12 @@ func checkImageExist(client *client.Client, imageItem string) bool {
 	return false
 }
 
-func pullImages(ctx context.Context, client *client.Client, image string) error {
-	options := types.ImagePullOptions{}
+func pullImages(ctx context.Context, client *client.Client, imageName string) error {
+	options := image.PullOptions{}
 	repos, _ := imageRepoRepo.List()
 	if len(repos) != 0 {
 		for _, repo := range repos {
-			if strings.HasPrefix(image, repo.DownloadUrl) && repo.Auth {
+			if strings.HasPrefix(imageName, repo.DownloadUrl) && repo.Auth {
 				authConfig := registry.AuthConfig{
 					Username: repo.Username,
 					Password: repo.Password,
@@ -905,8 +1007,13 @@ func pullImages(ctx context.Context, client *client.Client, image string) error 
 				options.RegistryAuth = authStr
 			}
 		}
+	} else {
+		hasAuth, authStr := loadAuthInfo(imageName)
+		if hasAuth {
+			options.RegistryAuth = authStr
+		}
 	}
-	out, err := client.ImagePull(ctx, image, options)
+	out, err := client.ImagePull(ctx, imageName, options)
 	if err != nil {
 		return err
 	}
@@ -1040,7 +1147,7 @@ func loadConfigInfo(isCreate bool, req dto.ContainerOperate, oldContainer *types
 		}
 	} else {
 		if req.Ipv4 != "" || req.Ipv6 != "" {
-			return nil, nil, nil, fmt.Errorf("Please set up the network")
+			return nil, nil, nil, fmt.Errorf("please set up the network")
 		}
 		networkConf = network.NetworkingConfig{}
 	}

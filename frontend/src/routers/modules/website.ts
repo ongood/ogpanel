@@ -58,6 +58,26 @@ const webSiteRouter = {
                 requiresAuth: false,
             },
         },
+        {
+            path: '/websites/runtimes/java',
+            name: 'java',
+            hidden: true,
+            component: () => import('@/views/website/runtime/java/index.vue'),
+            meta: {
+                activeMenu: '/websites/runtimes/java',
+                requiresAuth: false,
+            },
+        },
+        {
+            path: '/websites/runtimes/go',
+            name: 'go',
+            hidden: true,
+            component: () => import('@/views/website/runtime/go/index.vue'),
+            meta: {
+                activeMenu: '/websites/runtimes/go',
+                requiresAuth: false,
+            },
+        },
     ],
 };
 

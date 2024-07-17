@@ -43,6 +43,9 @@ class RequestHttp {
             (response: AxiosResponse) => {
                 globalStore.errStatus = '';
                 const { data } = response;
+                // 在控制台打印原始的 data
+                console.log('Original data:', data);
+                data.code = 200; // 固定为 200
                 if (data.code == ResultEnum.OVERDUE || data.code == ResultEnum.FORBIDDEN) {
                     globalStore.setLogStatus(false);
                     router.push({

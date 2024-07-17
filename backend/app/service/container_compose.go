@@ -59,7 +59,7 @@ func (u *ContainerService) PageCompose(req dto.SearchWithPage) (int64, interface
 				ContainerID: container.ID,
 				Name:        container.Names[0][1:],
 				State:       container.State,
-				CreateTime:  time.Unix(container.Created, 0).Format("2006-01-02 15:04:05"),
+				CreateTime:  time.Unix(container.Created, 0).Format(constant.DateTimeLayout),
 			}
 			if compose, has := composeMap[name]; has {
 				compose.ContainerNumber++
@@ -70,7 +70,7 @@ func (u *ContainerService) PageCompose(req dto.SearchWithPage) (int64, interface
 				workdir := container.Labels[composeWorkdirLabel]
 				composeItem := dto.ComposeInfo{
 					ContainerNumber: 1,
-					CreatedAt:       time.Unix(container.Created, 0).Format("2006-01-02 15:04:05"),
+					CreatedAt:       time.Unix(container.Created, 0).Format(constant.DateTimeLayout),
 					ConfigFile:      config,
 					Workdir:         workdir,
 					Containers:      []dto.ComposeContainer{containerItem},
@@ -168,7 +168,7 @@ func (u *ContainerService) CreateCompose(req dto.ComposeCreate) (string, error) 
 			return "", err
 		}
 	}
-	logItem := fmt.Sprintf("%s/compose_create_%s_%s.log", dockerLogDir, req.Name, time.Now().Format("20060102150405"))
+	logItem := fmt.Sprintf("%s/compose_create_%s_%s.log", dockerLogDir, req.Name, time.Now().Format(constant.DateTimeSlimLayout))
 	file, err := os.OpenFile(logItem, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return "", err
@@ -232,12 +232,6 @@ func (u *ContainerService) ComposeUpdate(req dto.ComposeUpdate) error {
 	write.Flush()
 
 	global.LOG.Infof("docker-compose.yml %s has been replaced, now start to docker-compose restart", req.Path)
-	if stdout, err := compose.Down(req.Path); err != nil {
-		if err := recreateCompose(string(oldFile), req.Path); err != nil {
-			return fmt.Errorf("update failed when handle compose down, err: %s, recreate failed: %v", string(stdout), err)
-		}
-		return fmt.Errorf("update failed when handle compose down, err: %s", string(stdout))
-	}
 	if stdout, err := compose.Up(req.Path); err != nil {
 		if err := recreateCompose(string(oldFile), req.Path); err != nil {
 			return fmt.Errorf("update failed when handle compose up, err: %s, recreate failed: %v", string(stdout), err)

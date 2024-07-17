@@ -74,7 +74,7 @@ ErrFileToLarge: "文件超过10M,无法打开"
 ErrPathNotFound: "目录不存在"
 ErrMovePathFailed: "目标路径不能包含原路径！"
 ErrLinkPathNotFound: "目标路径不存在!"
-ErrFileIsExit: "文件已存在！"
+ErrFileIsExist: "文件或文件夹已存在！"
 ErrFileUpload: "{{ .name }} 上传文件失败 {{ .detail}}"
 ErrFileDownloadDir: "不支持下载文件夹"
 ErrCmdNotFound: "{{ .name}} 命令不存在，请先在宿主机安装此命令"
@@ -120,6 +120,9 @@ ErrDefaultCA: "默认机构不能删除"
 ApplyWebSiteSSLLog: "开始更新 {{ .name }} 网站证书"
 ErrUpdateWebsiteSSL: "{{ .name }} 网站更新证书失败: {{ .err }}"
 ApplyWebSiteSSLSuccess: "更新网站证书成功"
+ErrExecShell: "执行脚本失败 {{ .err }}"
+ExecShellStart: "开始执行脚本"
+ExecShellSuccess: "脚本执行成功"
 
 #mysql
 ErrUserIsExist: "当前用户已存在，请重新输入"
@@ -131,7 +134,7 @@ ErrLocalExist: "本地数据库已存在该名称，请修改后重试"
 #redis
 ErrTypeOfRedis: "恢复文件类型与当前持久化方式不符，请修改后重试"
 
-#container 
+#container
 ErrInUsed: "{{ .detail }} 正被使用，无法删除"
 ErrObjectInUsed: "该对象正被使用，无法删除"
 ErrPortRules: "端口数目不匹配，请重新输入！"
@@ -174,6 +177,7 @@ CutWebsiteLogSuccess: "{{ .name }} 网站日志切割成功，备份路径 {{ .p
 #toolbox
 ErrNotExistUser: "当前用户不存在，请修改后重试！"
 ErrBanAction: "设置失败，当前 {{ .name }} 服务不可用，请检查后重试！"
+ErrClamdscanNotFound: "未检测到 clamdscan 命令，请参考文档安装！"
 
 #waf
 ErrScope: "不支持修改此配置"

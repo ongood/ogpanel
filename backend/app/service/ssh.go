@@ -62,7 +62,9 @@ func (u *SSHService) GetSSHInfo() (*dto.SSHInfo, error) {
 		active, err := systemctl.IsActive(serviceName)
 		if !active {
 			data.Status = constant.StatusDisable
-			data.Message = err.Error()
+			if err != nil {
+				data.Message = err.Error()
+			}
 		} else {
 			data.Status = constant.StatusEnable
 		}
@@ -218,7 +220,7 @@ func (u *SSHService) GenerateSSH(req dto.GenerateSSH) error {
 	}
 	secretFile := fmt.Sprintf("%s/.ssh/id_item_%s", currentUser.HomeDir, req.EncryptionMode)
 	secretPubFile := fmt.Sprintf("%s/.ssh/id_item_%s.pub", currentUser.HomeDir, req.EncryptionMode)
-	authFile := currentUser.HomeDir + "/.ssh/authorized_keys"
+	authFilePath := currentUser.HomeDir + "/.ssh/authorized_keys"
 
 	command := fmt.Sprintf("ssh-keygen -t %s -f %s/.ssh/id_item_%s | echo y", req.EncryptionMode, currentUser.HomeDir, req.EncryptionMode)
 	if len(req.Password) != 0 {
@@ -235,8 +237,12 @@ func (u *SSHService) GenerateSSH(req dto.GenerateSSH) error {
 		_ = os.Remove(secretPubFile)
 	}()
 
-	if _, err := os.Stat(authFile); err != nil {
-		_, _ = os.Create(authFile)
+	if _, err := os.Stat(authFilePath); err != nil && errors.Is(err, os.ErrNotExist) {
+		authFile, err := os.Create(authFilePath)
+		if err != nil {
+			return err
+		}
+		defer authFile.Close()
 	}
 	stdout1, err := cmd.Execf("cat %s >> %s/.ssh/authorized_keys", secretPubFile, currentUser.HomeDir)
 	if err != nil {
@@ -545,14 +551,14 @@ func loadDate(currentYear int, DateStr string, nyc *time.Location) time.Time {
 }
 
 func analyzeDateStr(parts []string) (int, string) {
-	t, err := time.Parse("2006-01-02T15:04:05.999999-07:00", parts[0])
+	t, err := time.Parse(time.RFC3339Nano, parts[0])
 	if err == nil {
 		if len(parts) < 12 {
 			return 0, ""
 		}
 		return 0, t.Format("2006 Jan 2 15:04:05")
 	}
-	t, err = time.Parse("2006-01-02 15:04:05", fmt.Sprintf("%s %s", parts[0], parts[1]))
+	t, err = time.Parse(constant.DateTimeLayout, fmt.Sprintf("%s %s", parts[0], parts[1]))
 	if err == nil {
 		if len(parts) < 14 {
 			return 0, ""

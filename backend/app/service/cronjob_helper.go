@@ -124,7 +124,7 @@ func (u *CronjobService) handleNtpSync() error {
 	if err != nil {
 		return err
 	}
-	if err := ntp.UpdateSystemTime(ntime.Format("2006-01-02 15:04:05")); err != nil {
+	if err := ntp.UpdateSystemTime(ntime.Format(constant.DateTimeLayout)); err != nil {
 		return err
 	}
 	return nil
@@ -161,7 +161,7 @@ func handleTar(sourceDir, targetDir, name, exclusionRules string, secret string)
 	commands := ""
 
 	if len(secret) != 0 {
-		extraCmd := "| openssl enc -aes-256-cbc -salt -k " + secret + " -out"
+		extraCmd := "| openssl enc -aes-256-cbc -salt -k '" + secret + "' -out"
 		commands = fmt.Sprintf("tar --warning=no-file-changed --ignore-failed-read -zcf %s %s %s %s", " -"+excludeRules, path, extraCmd, targetDir+"/"+name)
 		global.LOG.Debug(strings.ReplaceAll(commands, fmt.Sprintf(" %s ", secret), "******"))
 	} else {
@@ -186,7 +186,7 @@ func handleUnTar(sourceFile, targetDir string, secret string) error {
 	}
 	commands := ""
 	if len(secret) != 0 {
-		extraCmd := "openssl enc -d -aes-256-cbc -k " + secret + " -in " + sourceFile + " | "
+		extraCmd := "openssl enc -d -aes-256-cbc -k '" + secret + "' -in " + sourceFile + " | "
 		commands = fmt.Sprintf("%s tar -zxvf - -C %s", extraCmd, targetDir+" > /dev/null 2>&1")
 		global.LOG.Debug(strings.ReplaceAll(commands, fmt.Sprintf(" %s ", secret), "******"))
 	} else {
@@ -224,7 +224,7 @@ func (u *CronjobService) handleCutWebsiteLog(cronjob *model.Cronjob, startTime t
 			_ = os.MkdirAll(dstLogDir, 0755)
 		}
 
-		dstName := fmt.Sprintf("%s_log_%s.gz", website.PrimaryDomain, startTime.Format("20060102150405"))
+		dstName := fmt.Sprintf("%s_log_%s.gz", website.PrimaryDomain, startTime.Format(constant.DateTimeSlimLayout))
 		dstFilePath := path.Join(dstLogDir, dstName)
 		filePaths = append(filePaths, dstFilePath)
 
@@ -384,7 +384,7 @@ func (u *CronjobService) generateLogsPath(cronjob model.Cronjob, startTime time.
 		_ = os.MkdirAll(dir, os.ModePerm)
 	}
 
-	path := fmt.Sprintf("%s/%s.log", dir, startTime.Format("20060102150405"))
+	path := fmt.Sprintf("%s/%s.log", dir, startTime.Format(constant.DateTimeSlimLayout))
 	return path
 }
 

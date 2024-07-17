@@ -239,10 +239,40 @@ var AddProxy = &gormigrate.Migration{
 	},
 }
 
+var AddForward = &gormigrate.Migration{
+	ID: "202400611-add-forward",
+	Migrate: func(tx *gorm.DB) error {
+		if err := tx.AutoMigrate(&model.Forward{}); err != nil {
+			return err
+		}
+		return nil
+	},
+}
+
 var AddCronJobColumn = &gormigrate.Migration{
 	ID: "20240524-add-cronjob-command",
 	Migrate: func(tx *gorm.DB) error {
 		if err := tx.AutoMigrate(&model.Cronjob{}); err != nil {
+			return err
+		}
+		return nil
+	},
+}
+
+var AddShellColumn = &gormigrate.Migration{
+	ID: "20240620-update-website-ssl",
+	Migrate: func(tx *gorm.DB) error {
+		if err := tx.AutoMigrate(&model.WebsiteSSL{}); err != nil {
+			return err
+		}
+		return nil
+	},
+}
+
+var AddClam = &gormigrate.Migration{
+	ID: "20240701-add-clam",
+	Migrate: func(tx *gorm.DB) error {
+		if err := tx.AutoMigrate(&model.Clam{}); err != nil {
 			return err
 		}
 		return nil

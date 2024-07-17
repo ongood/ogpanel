@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"crypto"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"github.com/1Panel-dev/1Panel/backend/constant"
 	"github.com/1Panel-dev/1Panel/backend/global"
 	"github.com/1Panel-dev/1Panel/backend/i18n"
+	"github.com/1Panel-dev/1Panel/backend/utils/cmd"
 	"github.com/1Panel-dev/1Panel/backend/utils/common"
 	"github.com/1Panel-dev/1Panel/backend/utils/files"
 	"github.com/1Panel-dev/1Panel/backend/utils/ssl"
@@ -126,10 +128,15 @@ func (w WebsiteSSLService) Create(create request.WebsiteSSLCreate) (request.Webs
 		Nameserver2:   create.Nameserver2,
 		SkipDNS:       create.SkipDNS,
 		DisableCNAME:  create.DisableCNAME,
+		ExecShell:     create.ExecShell,
+	}
+	if create.ExecShell {
+		websiteSSL.Shell = create.Shell
 	}
 	if create.PushDir {
-		if !files.NewFileOp().Stat(create.Dir) {
-			return res, buserr.New(constant.ErrLinkPathNotFound)
+		fileOP := files.NewFileOp()
+		if !fileOP.Stat(create.Dir) {
+			_ = fileOP.CreateDir(create.Dir, 0755)
 		}
 		websiteSSL.Dir = create.Dir
 	}
@@ -226,9 +233,32 @@ func (w WebsiteSSLService) ObtainSSL(apply request.WebsiteSSLApply) error {
 		domains = append(domains, strings.Split(websiteSSL.Domains, ",")...)
 	}
 
-	privateKey, err := certcrypto.GeneratePrivateKey(ssl.KeyType(websiteSSL.KeyType))
-	if err != nil {
-		return err
+	var privateKey crypto.PrivateKey
+	if websiteSSL.PrivateKey == "" {
+		privateKey, err = certcrypto.GeneratePrivateKey(ssl.KeyType(websiteSSL.KeyType))
+		if err != nil {
+			return err
+		}
+	} else {
+		block, _ := pem.Decode([]byte(websiteSSL.PrivateKey))
+		if block == nil {
+			return buserr.New("invalid PEM block")
+		}
+		var privKey crypto.PrivateKey
+		keyType := ssl.KeyType(websiteSSL.KeyType)
+		switch keyType {
+		case certcrypto.EC256, certcrypto.EC384:
+			privKey, err = x509.ParseECPrivateKey(block.Bytes)
+			if err != nil {
+				return nil
+			}
+		case certcrypto.RSA2048, certcrypto.RSA3072, certcrypto.RSA4096:
+			privKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+			if err != nil {
+				return nil
+			}
+		}
+		privateKey = privKey
 	}
 
 	websiteSSL.Status = constant.SSLApply
@@ -268,6 +298,20 @@ func (w WebsiteSSLService) ObtainSSL(apply request.WebsiteSSLApply) error {
 		websiteSSL.Status = constant.SSLReady
 		legoLogger.Logger.Println(i18n.GetMsgWithMap("ApplySSLSuccess", map[string]interface{}{"domain": strings.Join(domains, ",")}))
 		saveCertificateFile(websiteSSL, logger)
+
+		if websiteSSL.ExecShell {
+			workDir := constant.DataDir
+			if websiteSSL.PushDir {
+				workDir = websiteSSL.Dir
+			}
+			legoLogger.Logger.Println(i18n.GetMsgByKey("ExecShellStart"))
+			if err = cmd.ExecShellWithTimeOut(websiteSSL.Shell, workDir, logger, 30*time.Minute); err != nil {
+				legoLogger.Logger.Println(i18n.GetMsgWithMap("ErrExecShell", map[string]interface{}{"err": err.Error()}))
+			} else {
+				legoLogger.Logger.Println(i18n.GetMsgByKey("ExecShellSuccess"))
+			}
+		}
+
 		err = websiteSSLRepo.Save(websiteSSL)
 		if err != nil {
 			return
@@ -382,12 +426,17 @@ func (w WebsiteSSLService) Update(update request.WebsiteSSLUpdate) error {
 	updateParams["primary_domain"] = update.PrimaryDomain
 	updateParams["description"] = update.Description
 	updateParams["provider"] = update.Provider
-	updateParams["key_type"] = update.KeyType
 	updateParams["push_dir"] = update.PushDir
 	updateParams["disable_cname"] = update.DisableCNAME
 	updateParams["skip_dns"] = update.SkipDNS
 	updateParams["nameserver1"] = update.Nameserver1
 	updateParams["nameserver2"] = update.Nameserver2
+	updateParams["exec_shell"] = update.ExecShell
+	if update.ExecShell {
+		updateParams["shell"] = update.Shell
+	} else {
+		updateParams["shell"] = ""
+	}
 
 	if websiteSSL.Provider != constant.SelfSigned {
 		acmeAccount, err := websiteAcmeRepo.GetFirst(commonRepo.WithByID(update.AcmeAccountID))
@@ -398,8 +447,9 @@ func (w WebsiteSSLService) Update(update request.WebsiteSSLUpdate) error {
 	}
 
 	if update.PushDir {
-		if !files.NewFileOp().Stat(update.Dir) {
-			return buserr.New(constant.ErrLinkPathNotFound)
+		fileOP := files.NewFileOp()
+		if !fileOP.Stat(update.Dir) {
+			_ = fileOP.CreateDir(update.Dir, 0755)
 		}
 		updateParams["dir"] = update.Dir
 	}

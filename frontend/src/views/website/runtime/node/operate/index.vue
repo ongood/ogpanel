@@ -1,5 +1,11 @@
 <template>
-    <el-drawer :close-on-click-modal="false" :close-on-press-escape="false" v-model="open" size="50%">
+    <el-drawer
+        :destroy-on-close="true"
+        :close-on-click-modal="false"
+        :close-on-press-escape="false"
+        v-model="open"
+        size="50%"
+    >
         <template #header>
             <DrawerHeader
                 :header="$t('runtime.' + mode)"
@@ -299,7 +305,7 @@ watch(
 watch(
     () => runtime.name,
     (newVal) => {
-        if (newVal) {
+        if (newVal && mode.value == 'create') {
             runtime.params['CONTAINER_NAME'] = newVal;
         }
     },

@@ -9,6 +9,14 @@ export namespace Container {
         name: string;
         newName: string;
     }
+    export interface ContainerCommit {
+        containerID: string;
+        containerName: string;
+        newImageName: string;
+        comment: string;
+        author: string;
+        pause: boolean;
+    }
     export interface ContainerSearch extends ReqPage {
         name: string;
         state: string;
@@ -307,5 +315,12 @@ export namespace Container {
 
         logMaxSize: string;
         logMaxFile: string;
+    }
+
+    export interface ContainerLogInfo {
+        container: string;
+        since: string;
+        tail: number;
+        containerType: string;
     }
 }

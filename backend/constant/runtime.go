@@ -16,6 +16,8 @@ const (
 
 	RuntimePHP  = "php"
 	RuntimeNode = "node"
+	RuntimeJava = "java"
+	RuntimeGo   = "go"
 
 	RuntimeProxyUnix = "unix"
 	RuntimeProxyTcp  = "tcp"

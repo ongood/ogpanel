@@ -10,7 +10,8 @@ type FileOption struct {
 }
 
 type FileContentReq struct {
-	Path string `json:"path" validate:"required"`
+	Path     string `json:"path" validate:"required"`
+	IsDetail bool   `json:"isDetail"`
 }
 
 type SearchUploadWithPage struct {
@@ -126,6 +127,7 @@ type FileReadByLineReq struct {
 	Type     string `json:"type" validate:"required"`
 	ID       uint   `json:"ID"`
 	Name     string `json:"name"`
+	Latest   bool   `json:"latest"`
 }
 
 type FileExistReq struct {
