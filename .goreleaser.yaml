@@ -21,18 +21,12 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-    goarm:
-      - 7
     goarch:
       - amd64
-      - arm64
-      - arm
-      - ppc64le
-      - s390x
 
 archives:
   - format: tar.gz
-    name_template: "1panel-v{{ .Version }}-{{ .Os }}-{{ .Arch }}{{- if .Arm }}v{{ .Arm }}{{ end }}"
+    name_template: "1panel-v{{ .Version }}-{{ .Os }}-{{ .Arch }}"
     wrap_in_directory: true
     files:
       - 1pctl
