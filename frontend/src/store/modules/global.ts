@@ -37,7 +37,7 @@ const GlobalStore = defineStore({
         showEntranceWarn: true,
         defaultNetwork: 'all',
 
-        isProductPro: true,
+        isProductPro: false,
         productProExpires: 0,
 
         errStatus: '',
